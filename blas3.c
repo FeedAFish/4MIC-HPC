@@ -4,11 +4,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifndef M
 #define M 4 /* Number of row     of matrix A */
+#endif
+#ifndef K
 #define K 8 /* Number of columns of matrix A and rows of matrix B */
+#endif
+#ifndef N
 #define N 4 /* Number of columns of matrix B */
+#endif
 
+#ifndef BLOCK
 #define BLOCK 4
+#endif
 
 /* Init a Matrix A(nrow,ncol) according to Aij = c*(i+j)/nrow/ncol */
 
@@ -129,41 +137,53 @@ int main() {
 
   init(M, K, lda, a, 1.0);
   init(K, N, ldb, b, 2.0);
+
+#ifndef NO_PRINT_ARRAY
   print_array(M, K, lda, a);
   print_array(K, N, ldb, b);
+#endif
 
   /* Naive dot */
-
+#ifndef NO_NATIVE_DOT
   time = omp_get_wtime();
   naive_dot(a, lda, b, ldb, c, ldc);
   time = omp_get_wtime() - time;
   printf("Frobenius Norm   = %f\n", norm(M, N, ldc, c));
   printf("Total time naive = %f\n", time);
   printf("Gflops           = %f\n\n", flops / (time * 1e9));
+#ifndef NO_PRINT_ARRAY
   print_array(M, N, ldc, c);
+#endif
+#endif
 
   /* Saxpy dot */
-
+#ifndef NO_SAXPY_DOT
   time = omp_get_wtime();
   saxpy_dot(a, lda, b, ldb, c, ldc);
   time = omp_get_wtime() - time;
   printf("Frobenius Norm   = %f\n", norm(M, N, ldc, c));
   printf("Total time saxpy = %f\n", time);
   printf("Gflops           = %f\n\n", flops / (time * 1e9));
+#ifndef NO_PRINT_ARRAY
   print_array(M, N, ldc, c);
+#endif
+#endif
 
   /* Blocking dot */
-
+#ifndef NO_BLOCKING_DOT
   time = omp_get_wtime();
   blocking_dot(a, lda, b, ldb, c, ldc);
   time = omp_get_wtime() - time;
   printf("Frobenius Norm   = %f\n", norm(M, N, ldc, c));
   printf("Total time tiled = %f\n", time);
   printf("Gflops           = %f\n\n", flops / (time * 1e9));
+#ifndef NO_PRINT_ARRAY
   print_array(M, N, ldc, c);
+#endif
+#endif
 
   /* BLAS dot */
-
+#ifndef NO_BLAS_DOT
   double alpha = 1.0;
   double beta = 0.0;
   time = omp_get_wtime();
@@ -173,7 +193,10 @@ int main() {
   printf("Frobenius Norm   = %f\n", norm(M, N, ldc, c));
   printf("Total time BLAS  = %f\n", time);
   printf("Gflops           = %f\n\n", flops / (time * 1e9));
+#ifndef NO_PRINT_ARRAY
   print_array(M, N, ldc, c);
+#endif
+#endif
 
   free(a);
   free(b);
