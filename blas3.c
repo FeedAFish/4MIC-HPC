@@ -23,7 +23,7 @@
 void init(int nrow, int ncol, int ld, double *A, double cst) {
   int i, j;
 #ifndef NO_OMP
-#pragma  // TO BE FINISHED
+#pragma omp parallel for default(shared) private(i, j) schedule(runtime)
 #endif
   {
     for (i = 0; i < nrow; i++)
@@ -39,13 +39,13 @@ double norm(int nrow, int ncol, int ld, double *A) {
   double norm = 0.;
   int i, j;
 #ifndef NO_OMP
-#pragma  // TO BE FINISHED
+#pragma omp parallel for default(shared) private(i, j) reduction(+ : norm) schedule(runtime)
 #endif
   {
     for (i = 0; i < nrow; i++)
       for (j = 0; j < ncol; j++) norm += A[i + j * ld] * A[i + j * ld];
-    return sqrt(norm);
   }
+  return sqrt(norm);
 }
 
 /* Print in terminal window a Matrix A(nrow,ncol) */
@@ -66,7 +66,7 @@ void naive_dot(double *A, int lda, double *B, int ldb, double *C, int ldc) {
   int i, j, k;
 /* Set the C matrix to zero */
 #ifndef NO_OMP
-#pragma  // TO BE FINISHED
+#pragma omp parallel for default(shared) private(i, j) schedule(runtime)
 #endif
   {
     for (i = 0; i < M; i++)
@@ -74,7 +74,7 @@ void naive_dot(double *A, int lda, double *B, int ldb, double *C, int ldc) {
   }
 /* Perform the matrix-matrix product */
 #ifndef NO_OMP
-#pragma  // TO BE FINISHED
+#pragma omp parallel for default(shared) private(i, j, k) schedule(runtime)
 #endif
   {
     for (i = 0; i < M; i++)
@@ -92,7 +92,7 @@ void saxpy_dot(double *A, int lda, double *B, int ldb, double *C, int ldc) {
   double temp;
 /* Set the C matrix to zero */
 #ifndef NO_OMP
-#pragma  // TO BE FINISHED
+#pragma omp parallel for default(shared) private(i, j) schedule(runtime)
 #endif
   {
     for (i = 0; i < M; i++)
@@ -100,7 +100,7 @@ void saxpy_dot(double *A, int lda, double *B, int ldb, double *C, int ldc) {
   }
 /* Perform the matrix-matrix product */
 #ifndef NO_OMP
-#pragma  // TO BE FINISHED
+#pragma omp parallel for default(shared) private(i, j, k) schedule(runtime)
 #endif
   {
     for (k = 0; k < K; k++)
@@ -118,7 +118,7 @@ void blocking_dot(double *A, int lda, double *B, int ldb, double *C, int ldc) {
   double temp;
 /* Set the C matrix to zero */
 #ifndef NO_OMP
-#pragma  // TO BE FINISHED
+#pragma omp parallel for default(shared) private(i, j) schedule(runtime)
 #endif
   {
     for (i = 0; i < M; i++)
@@ -126,7 +126,8 @@ void blocking_dot(double *A, int lda, double *B, int ldb, double *C, int ldc) {
   }
 /* Perform the matrix-matrix product */
 #ifndef NO_OMP
-#pragma  // TO BE FINISHED
+#pragma omp parallel for default(shared) private(i, j, k, ii, jj, kk) \
+    schedule(runtime)
 #endif
   {
     for (i = 0; i < M; i++)
