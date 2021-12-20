@@ -1,0 +1,261 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+  12pt,
+  xcolor = usenames,dvipsnames]{article}
+\usepackage{amsmath,amssymb}
+\usepackage{lmodern}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math}
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\IfFileExists{bookmark.sty}{\usepackage{bookmark}}{\usepackage{hyperref}}
+\hypersetup{
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+\urlstyle{same} % disable monospaced font for URLs
+\usepackage[margin=1in]{geometry}
+\usepackage{listings}
+\newcommand{\passthrough}[1]{#1}
+\lstset{defaultdialect=[5.3]Lua}
+\lstset{defaultdialect=[x86masm]Assembler}
+\usepackage{longtable,booktabs,array}
+\usepackage{calc} % for calculating minipage widths
+% Correct order of tables after \paragraph or \subparagraph
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
+\makeatother
+% Allow footnotes in longtable head/foot
+\IfFileExists{footnotehyper.sty}{\usepackage{footnotehyper}}{\usepackage{footnote}}
+\makesavenoteenv{longtable}
+\usepackage{graphicx}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{5}
+\usepackage{setspace}
+\usepackage{float}
+\usepackage{fontspec}
+\usepackage{subfig}
+\setmonofont{JetBrains Mono}[Contextuals=Alternate]
+\floatplacement{figure}{H}
+\lstset{
+  language=C,
+  basicstyle={\linespread{0.8}\ttfamily},
+  stepnumber=1,
+  numbersep=5pt,
+  backgroundcolor=\color{cyan!5},
+  showspaces=false,
+  showstringspaces=false,
+  showtabs=false,
+  frame=single,
+  rulecolor=\color{black},
+  tabsize=2,
+  captionpos=b,
+  breaklines=true,
+  breakatwhitespace=false,
+  keywordstyle=\color{RoyalBlue},
+  commentstyle=\color{Green},
+  stringstyle=\color{Orange},
+}
+\makeatletter
+\renewcommand\paragraph{\@startsection{paragraph}{4}{\z@}%
+  {-2.5ex\@plus -1ex \@minus -.25ex}%
+  {1.25ex \@plus .25ex}%
+  {\normalfont\normalsize\bfseries}}
+\makeatother
+\setcounter{secnumdepth}{4}
+\hypersetup{
+  colorlinks = true,
+}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{wrapfig}
+\usepackage{float}
+\usepackage{colortbl}
+\usepackage{pdflscape}
+\usepackage{tabu}
+\usepackage{threeparttable}
+\usepackage{threeparttablex}
+\usepackage[normalem]{ulem}
+\usepackage{makecell}
+\usepackage{xcolor}
+\ifLuaTeX
+  \usepackage{selnolig}  % disable illegal ligatures
+\fi
+
+\author{}
+\date{\vspace{-2.5em}}
+
+\begin{document}
+
+\onehalfspacing
+
+\pagenumbering{gobble}
+
+%\begin{titlepage}
+\vspace*{\fill}
+\begin{center}
+  \LARGE{\textbf{Optimization and OpenMP parallelization of the dense matrix-matrix product computation}}\\
+  \Large{\textbf{HPC 4GMM 2021/2022}}\\
+  \vspace*{1\baselineskip}
+  \Large{\textbf{Members}}\\
+  PHAM Tuan Kiet\\
+  VO Van Nghia\\
+  \vfill % equivalent to \vspace{\fill}
+  \vspace*{\fill}
+  \Large{\textbf{Date}}\\
+  12 Dec, 2021
+\end{center}
+% \end{titlepage}
+
+\newpage
+
+\newpage
+\pagenumbering{roman}
+\tableofcontents
+\addcontentsline{toc}{section}{\contentsname}
+
+\listoffigures
+
+\newpage
+\pagenumbering{arabic}
+
+\hypertarget{techniques}{%
+\section{Techniques}\label{techniques}}
+
+\hypertarget{native-dot}{%
+\subsection{Native dot}\label{native-dot}}
+
+We first mention here the original \passthrough{\lstinline!native\_dot!} function. This function serves as an anchor (or base case) for performance comparision as well as for making sure we have the right result when using other techniques.
+
+\begin{lstlisting}[language=C]
+for (i = 0; i < M; i++)
+  for (j = 0; j < N; j++)
+    for (k = 0; k < K; k++) C[i + ldc * j] += A[i + lda * k] * B[k + ldb * j];
+\end{lstlisting}
+
+Below is the output of \passthrough{\lstinline!native\_dot!} for \passthrough{\lstinline!M = 1!}, \passthrough{\lstinline!K = 2!}, \passthrough{\lstinline!N = 2!}:
+
+\begin{lstlisting}
+## 
+## Parallel execution with a maximum of 4 threads callable
+## 
+## Scheduling static with chunk = 0
+## 
+## ( 1.00  1.50 )
+## 
+## ( 1.00  1.50 )
+## ( 1.50  2.00 )
+## 
+## Frobenius Norm   = 5.550901
+## Total time naive = 0.000000
+## Gflops           = inf
+## 
+## ( 3.25  4.50 )
+\end{lstlisting}
+
+As
+\[
+\begin{pmatrix}
+1 && 1,5
+\end{pmatrix}\begin{pmatrix}
+1 && 1,5\\
+1,5 && 2
+\end{pmatrix}=\begin{pmatrix}
+3,25 && 4,5
+\end{pmatrix}
+\]
+The result of this function is correct. We could move on to the next technique.
+
+\hypertarget{spatial-locality}{%
+\subsection{Spatial locality}\label{spatial-locality}}
+
+Spatial locality refers to the following scenario: if a particular storage location is referenced at a particular time, then it is likely that nearby memory locations will be referenced in the near future. In order to take advantages of this property, we notice that:
+
+\begin{itemize}
+\tightlist
+\item
+  In memory, \passthrough{\lstinline!A!}, \passthrough{\lstinline!B!}, \passthrough{\lstinline!C!} are stored in contiguous memory block.
+\item
+  When using the index order \passthrough{\lstinline!i!}, \passthrough{\lstinline!j!}, \passthrough{\lstinline!k!}, we access \passthrough{\lstinline!B!} consecutively (as we access \passthrough{\lstinline!B!} by \passthrough{\lstinline!B[k + ldb * j]!}), but not \passthrough{\lstinline!A!} and \passthrough{\lstinline!C!}.
+\item
+  Data from \passthrough{\lstinline!A!}, \passthrough{\lstinline!B!}, \passthrough{\lstinline!C!} are loaded in a memory block consisting of severals consecutive elements to cache. Thus, we could make use of spatial locality when reading data continously.
+\end{itemize}
+
+From 3 points above, we decide to switch the index order to \passthrough{\lstinline!k!}, \passthrough{\lstinline!j!}, \passthrough{\lstinline!i!}. Now we see that both reading and writing operations on \passthrough{\lstinline!C!} are in cache, this brings us a critical gain in performance. In addition, reading operations on \passthrough{\lstinline!A!} are in cache too but those on \passthrough{\lstinline!B!} are not.
+
+\begin{lstlisting}[language=C]
+for (k = 0; k < K; k++)
+  for (j = 0; j < N; j++)
+    for (i = 0; i < M; i++) C[i + ldc * j] += A[i + lda * k] * B[k + ldb * j];
+\end{lstlisting}
+
+For comparision, we have a table below with small \passthrough{\lstinline!M!}, \passthrough{\lstinline!K!}, \passthrough{\lstinline!N!} (\passthrough{\lstinline!OMP!} indicates if we enable \passthrough{\lstinline!Open MP!} or not).
+
+\begin{longtable}[t]{lrrrrrrl}
+\toprule
+Technique & Time & Norm & Gflops & M & K & N & OMP\\
+\midrule
+\cellcolor{gray!6}{Naive} & \cellcolor{gray!6}{0} & \cellcolor{gray!6}{3.461352} & \cellcolor{gray!6}{Inf} & \cellcolor{gray!6}{4} & \cellcolor{gray!6}{8} & \cellcolor{gray!6}{4} & \cellcolor{gray!6}{FALSE}\\
+Saxpy & 0 & 3.461352 & Inf & 4 & 8 & 4 & FALSE\\
+\bottomrule
+\end{longtable}
+
+We have the frobenius norm of both techniques are 3,461352, which indicate we have the right computation result. In addition, calculating time is already significantly small (\(\approx\) 0 second in both methods) and the difference between these two can therefore be ommited.
+
+However, if we set \passthrough{\lstinline!M!}, \passthrough{\lstinline!K!}, \passthrough{\lstinline!N!} to 2048. There will be a huge performance gain as in the table shown below.
+
+\begin{longtable}[t]{lrrrrrrl}
+\toprule
+Technique & Time & Norm & Gflops & M & K & N & OMP\\
+\midrule
+\cellcolor{gray!6}{Naive} & \cellcolor{gray!6}{82.764972} & \cellcolor{gray!6}{2.323362} & \cellcolor{gray!6}{0.207574} & \cellcolor{gray!6}{2048} & \cellcolor{gray!6}{2048} & \cellcolor{gray!6}{2048} & \cellcolor{gray!6}{FALSE}\\
+Saxpy & 4.022001 & 2.323362 & 4.271473 & 2048 & 2048 & 2048 & FALSE\\
+\bottomrule
+\end{longtable}
+
+Here, the \passthrough{\lstinline!native\_dot!} function is approximately 21 times slower than the \passthrough{\lstinline!saxpy\_dot!} function.
+
+\end{document}

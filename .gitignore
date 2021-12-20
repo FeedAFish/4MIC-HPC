@@ -626,3 +626,4 @@ TSWLatexianTemp*
 # End of https://www.toptal.com/developers/gitignore/api/c,latex
 
 .local.*
+blas_*
