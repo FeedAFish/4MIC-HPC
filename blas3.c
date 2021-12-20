@@ -180,7 +180,7 @@ int main() {
 #endif
 
   /* Naive dot */
-#ifndef NO_NATIVE_DOT
+#ifndef NO_NAIVE_DOT
   time = omp_get_wtime();
   naive_dot(a, lda, b, ldb, c, ldc);
   time = omp_get_wtime() - time;
