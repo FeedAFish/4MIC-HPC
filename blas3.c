@@ -22,7 +22,9 @@
 
 void init(int nrow, int ncol, int ld, double *A, double cst) {
   int i, j;
+#ifndef NO_OPENMP
 #pragma  // TO BE FINISHED
+#endif
   for (i = 0; i < nrow; i++)
     for (j = 0; j < ncol; j++)
       A[i + j * ld] =
@@ -34,7 +36,9 @@ void init(int nrow, int ncol, int ld, double *A, double cst) {
 double norm(int nrow, int ncol, int ld, double *A) {
   double norm = 0.;
   int i, j;
+#ifndef NO_OPENMP
 #pragma  // TO BE FINISHED
+#endif
   for (i = 0; i < nrow; i++)
     for (j = 0; j < ncol; j++) norm += A[i + j * ld] * A[i + j * ld];
   return sqrt(norm);
@@ -57,11 +61,15 @@ void print_array(int nrow, int ncol, int ld, double *A) {
 void naive_dot(double *A, int lda, double *B, int ldb, double *C, int ldc) {
   int i, j, k;
 /* Set the C matrix to zero */
+#ifndef NO_OPENMP
 #pragma  // TO BE FINISHED
+#endif
   for (i = 0; i < M; i++)
     for (j = 0; j < N; j++) C[i + ldc * j] = 0.;
 /* Perform the matrix-matrix product */
+#ifndef NO_OPENMP
 #pragma  // TO BE FINISHED
+#endif
   for (i = 0; i < M; i++)
     for (j = 0; j < N; j++)
       for (k = 0; k < K; k++) C[i + ldc * j] += A[i + lda * k] * B[k + ldb * j];
@@ -74,11 +82,15 @@ void saxpy_dot(double *A, int lda, double *B, int ldb, double *C, int ldc) {
   int i, j, k;
   double temp;
 /* Set the C matrix to zero */
+#ifndef NO_OPENMP
 #pragma  // TO BE FINISHED
+#endif
   for (i = 0; i < M; i++)
     for (j = 0; j < N; j++) C[i + ldc * j] = 0.;
 /* Perform the matrix-matrix product */
+#ifndef NO_OPENMP
 #pragma  // TO BE FINISHED
+#endif
   for (k = 0; k < K; k++)
     for (j = 0; j < N; j++)
       for (i = 0; i < M; i++) C[i + ldc * j] += A[i + lda * k] * B[k + ldb * j];
@@ -91,11 +103,15 @@ void blocking_dot(double *A, int lda, double *B, int ldb, double *C, int ldc) {
   int i, j, k, ii, jj, kk;
   double temp;
 /* Set the C matrix to zero */
+#ifndef NO_OPENMP
 #pragma  // TO BE FINISHED
+#endif
   for (i = 0; i < M; i++)
     for (j = 0; j < N; j++) C[i + ldc * j] = 0.;
 /* Perform the matrix-matrix product */
+#ifndef NO_OPENMP
 #pragma  // TO BE FINISHED
+#endif
   for (i = 0; i < M; i++)
     for (j = 0; j < N; j++)
       for (k = 0; k < K; k++) C[i + ldc * j] += A[i + lda * k] * B[k + ldb * j];
