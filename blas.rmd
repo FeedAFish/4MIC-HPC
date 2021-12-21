@@ -86,10 +86,10 @@ def compile_and_run(
     command = "clang" if sys.platform == "darwin" else "gcc"
     args = [command, "-o", "blas3", "blas3.c", "-O3", "-lblas", "-fopenmp", "-lm"]
 
-    args.append(f"-D M={M}")
-    args.append(f"-D K={K}")
-    args.append(f"-D N={N}")
-    args.append(f"-D BLOCK={block}")
+    args.append(f"-D M_HPC={M}")
+    args.append(f"-D K_HPC={K}")
+    args.append(f"-D N_HPC={N}")
+    args.append(f"-D BLOCK_HPC={block}")
 
     if not kwargs.get("printarray"):
         args.append("-D NO_PRINT_ARRAY")
