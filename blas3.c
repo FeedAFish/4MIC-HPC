@@ -130,10 +130,14 @@ void blocking_dot(double *A, int lda, double *B, int ldb, double *C, int ldc) {
     schedule(runtime)
 #endif
   {
-    for (i = 0; i < M; i++)
-      for (j = 0; j < N; j++)
-        for (k = 0; k < K; k++)
-          C[i + ldc * j] += A[i + lda * k] * B[k + ldb * j];
+    for (k = 0; k < K; k += BLOCK)
+      for (j = 0; j < N; j += BLOCK)
+        for (i = 0; i < M; i += BLOCK)
+          for (kk = 0; kk < fmin(K - k, BLOCK); kk++)
+            for (jj = 0; jj < fmin(N - j, BLOCK); jj++)
+              for (ii = 0; ii < fmin(M - i, BLOCK); ii++)
+                C[(ii + i) + ldc * (jj + j)] +=
+                    A[(ii + i) + lda * (kk + k)] * B[(kk + k) + ldb * (jj + j)];
   }
 }
 
