@@ -114,7 +114,7 @@ def compile_and_run(
     subprocess.run([" ".join(args)], shell=True)
 
     raw_output = ""
-    log_path = f".local.{M}.{K}.{N}.{omp}.{num_threads}.{schedule}.log"
+    log_path = f".local.{M}.{K}.{N}.{block}.{omp}.{num_threads}.{schedule}.log"
     if os.path.exists(log_path):
         with open(log_path, "r") as f:
             raw_output = f.read()
