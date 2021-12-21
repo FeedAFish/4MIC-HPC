@@ -25,12 +25,10 @@ void init(int nrow, int ncol, int ld, double *A, double cst) {
 #ifndef NO_OMP
 #pragma omp parallel for default(shared) private(i, j) schedule(runtime)
 #endif
-  {
-    for (i = 0; i < nrow; i++)
-      for (j = 0; j < ncol; j++)
-        A[i + j * ld] =
-            cst * (double)(i + 1 + j + 1) / (double)nrow / (double)ncol;
-  }
+  for (i = 0; i < nrow; i++)
+    for (j = 0; j < ncol; j++)
+      A[i + j * ld] =
+          cst * (double)(i + 1 + j + 1) / (double)nrow / (double)ncol;
 }
 
 /* Compute the Frobenius norm of a Matrix A(nrow,ncol) */
@@ -41,10 +39,8 @@ double norm(int nrow, int ncol, int ld, double *A) {
 #ifndef NO_OMP
 #pragma omp parallel for default(shared) private(i, j) reduction(+ : norm) schedule(runtime)
 #endif
-  {
-    for (i = 0; i < nrow; i++)
-      for (j = 0; j < ncol; j++) norm += A[i + j * ld] * A[i + j * ld];
-  }
+  for (i = 0; i < nrow; i++)
+    for (j = 0; j < ncol; j++) norm += A[i + j * ld] * A[i + j * ld];
   return sqrt(norm);
 }
 
@@ -68,20 +64,15 @@ void naive_dot(double *A, int lda, double *B, int ldb, double *C, int ldc) {
 #ifndef NO_OMP
 #pragma omp parallel for default(shared) private(i, j) schedule(runtime)
 #endif
-  {
-    for (i = 0; i < M; i++)
-      for (j = 0; j < N; j++) C[i + ldc * j] = 0.;
-  }
+  for (i = 0; i < M; i++)
+    for (j = 0; j < N; j++) C[i + ldc * j] = 0.;
 /* Perform the matrix-matrix product */
 #ifndef NO_OMP
 #pragma omp parallel for default(shared) private(i, j, k) schedule(runtime)
 #endif
-  {
-    for (i = 0; i < M; i++)
-      for (j = 0; j < N; j++)
-        for (k = 0; k < K; k++)
-          C[i + ldc * j] += A[i + lda * k] * B[k + ldb * j];
-  }
+  for (i = 0; i < M; i++)
+    for (j = 0; j < N; j++)
+      for (k = 0; k < K; k++) C[i + ldc * j] += A[i + lda * k] * B[k + ldb * j];
 }
 
 /* Perform C = A x B with C a (N,M) matrix, A a (M,K) matrix and B a (K,N)
@@ -94,20 +85,15 @@ void saxpy_dot(double *A, int lda, double *B, int ldb, double *C, int ldc) {
 #ifndef NO_OMP
 #pragma omp parallel for default(shared) private(i, j) schedule(runtime)
 #endif
-  {
-    for (i = 0; i < M; i++)
-      for (j = 0; j < N; j++) C[i + ldc * j] = 0.;
-  }
+  for (i = 0; i < M; i++)
+    for (j = 0; j < N; j++) C[i + ldc * j] = 0.;
 /* Perform the matrix-matrix product */
 #ifndef NO_OMP
 #pragma omp parallel for default(shared) private(i, j, k) schedule(runtime)
 #endif
-  {
-    for (k = 0; k < K; k++)
-      for (j = 0; j < N; j++)
-        for (i = 0; i < M; i++)
-          C[i + ldc * j] += A[i + lda * k] * B[k + ldb * j];
-  }
+  for (k = 0; k < K; k++)
+    for (j = 0; j < N; j++)
+      for (i = 0; i < M; i++) C[i + ldc * j] += A[i + lda * k] * B[k + ldb * j];
 }
 
 /* Perform C = A x B with C a (N,M) matrix, A a (M,K) matrix and B a (K,N)
@@ -120,25 +106,21 @@ void blocking_dot(double *A, int lda, double *B, int ldb, double *C, int ldc) {
 #ifndef NO_OMP
 #pragma omp parallel for default(shared) private(i, j) schedule(runtime)
 #endif
-  {
-    for (i = 0; i < M; i++)
-      for (j = 0; j < N; j++) C[i + ldc * j] = 0.;
-  }
+  for (i = 0; i < M; i++)
+    for (j = 0; j < N; j++) C[i + ldc * j] = 0.;
 /* Perform the matrix-matrix product */
 #ifndef NO_OMP
 #pragma omp parallel for default(shared) private(i, j, k, ii, jj, kk) \
     schedule(runtime)
 #endif
-  {
-    for (k = 0; k < K; k += BLOCK)
-      for (j = 0; j < N; j += BLOCK)
-        for (i = 0; i < M; i += BLOCK)
-          for (kk = 0; kk < fmin(K - k, BLOCK); kk++)
-            for (jj = 0; jj < fmin(N - j, BLOCK); jj++)
-              for (ii = 0; ii < fmin(M - i, BLOCK); ii++)
-                C[(ii + i) + ldc * (jj + j)] +=
-                    A[(ii + i) + lda * (kk + k)] * B[(kk + k) + ldb * (jj + j)];
-  }
+  for (k = 0; k < K; k += BLOCK)
+    for (j = 0; j < N; j += BLOCK)
+      for (i = 0; i < M; i += BLOCK)
+        for (kk = 0; kk < fmin(K - k, BLOCK); kk++)
+          for (jj = 0; jj < fmin(N - j, BLOCK); jj++)
+            for (ii = 0; ii < fmin(M - i, BLOCK); ii++)
+              C[(ii + i) + ldc * (jj + j)] +=
+                  A[(ii + i) + lda * (kk + k)] * B[(kk + k) + ldb * (jj + j)];
 }
 
 int main() {
