@@ -165,10 +165,10 @@
 \hypertarget{techniques}{%
 \section{Techniques}\label{techniques}}
 
-\hypertarget{native-dot}{%
-\subsection{Native dot}\label{native-dot}}
+\hypertarget{naive-dot}{%
+\subsection{Naive dot}\label{naive-dot}}
 
-We first mention here the original \passthrough{\lstinline!native\_dot!} function. This function serves as an anchor (or base case) for performance comparision as well as for making sure we have the right result when using other techniques.
+We first mention here the original \passthrough{\lstinline!naive\_dot!} function. This function serves as an anchor (or base case) for performance comparision as well as for making sure we have the right result when using other techniques.
 
 \begin{lstlisting}[language=C]
 for (i = 0; i < M; i++)
@@ -176,7 +176,7 @@ for (i = 0; i < M; i++)
     for (k = 0; k < K; k++) C[i + ldc * j] += A[i + lda * k] * B[k + ldb * j];
 \end{lstlisting}
 
-Below is the output of \passthrough{\lstinline!native\_dot!} for \passthrough{\lstinline!M = 1!}, \passthrough{\lstinline!K = 2!}, \passthrough{\lstinline!N = 2!}:
+Below is the output of \passthrough{\lstinline!naive\_dot!} for \passthrough{\lstinline!M = 1!}, \passthrough{\lstinline!K = 2!}, \passthrough{\lstinline!N = 2!}:
 
 \begin{lstlisting}
 ## 
@@ -234,28 +234,44 @@ for (k = 0; k < K; k++)
 
 For comparision, we have a table below with small \passthrough{\lstinline!M!}, \passthrough{\lstinline!K!}, \passthrough{\lstinline!N!} (\passthrough{\lstinline!OMP!} indicates if we enable \passthrough{\lstinline!Open MP!} or not).
 
-\begin{longtable}[t]{lrrrrrrl}
+\begin{table}[!h]
+\centering
+\resizebox{\linewidth}{!}{
+\begin{tabular}[t]{lrrrrrrrl}
 \toprule
-Technique & Time & Norm & Gflops & M & K & N & OMP\\
+Technique & Time & Norm & Gflops & M & K & N & Block & OMP\\
 \midrule
-\cellcolor{gray!6}{Naive} & \cellcolor{gray!6}{0} & \cellcolor{gray!6}{3.461352} & \cellcolor{gray!6}{Inf} & \cellcolor{gray!6}{4} & \cellcolor{gray!6}{8} & \cellcolor{gray!6}{4} & \cellcolor{gray!6}{FALSE}\\
-Saxpy & 0 & 3.461352 & Inf & 4 & 8 & 4 & FALSE\\
+Naive & 0.000002 & 3.461352 & 0.134218 & 4 & 8 & 4 & 4 & F\\
+Saxpy & 0.000000 & 3.461352 & Inf & 4 & 8 & 4 & 4 & F\\
 \bottomrule
-\end{longtable}
+\end{tabular}}
+\end{table}
 
 We have the frobenius norm of both techniques are 3,461352, which indicate we have the right computation result. In addition, calculating time is already significantly small (\(\approx\) 0 second in both methods) and the difference between these two can therefore be ommited.
 
 However, if we set \passthrough{\lstinline!M!}, \passthrough{\lstinline!K!}, \passthrough{\lstinline!N!} to 2048. There will be a huge performance gain as in the table shown below.
 
-\begin{longtable}[t]{lrrrrrrl}
+\begin{table}[!h]
+\centering
+\resizebox{\linewidth}{!}{
+\begin{tabular}[t]{lrrrrrrrl}
 \toprule
-Technique & Time & Norm & Gflops & M & K & N & OMP\\
+Technique & Time & Norm & Gflops & M & K & N & Block & OMP\\
 \midrule
-\cellcolor{gray!6}{Naive} & \cellcolor{gray!6}{82.764972} & \cellcolor{gray!6}{2.323362} & \cellcolor{gray!6}{0.207574} & \cellcolor{gray!6}{2048} & \cellcolor{gray!6}{2048} & \cellcolor{gray!6}{2048} & \cellcolor{gray!6}{FALSE}\\
-Saxpy & 4.022001 & 2.323362 & 4.271473 & 2048 & 2048 & 2048 & FALSE\\
+Naive & 80.865779 & 2.323362 & 0.212449 & 2048 & 2048 & 2048 & 4 & F\\
+Saxpy & 4.034589 & 2.323362 & 4.258146 & 2048 & 2048 & 2048 & 4 & F\\
 \bottomrule
-\end{longtable}
+\end{tabular}}
+\end{table}
 
-Here, the \passthrough{\lstinline!native\_dot!} function is approximately 21 times slower than the \passthrough{\lstinline!saxpy\_dot!} function.
+Here, the \passthrough{\lstinline!naive\_dot!} function is approximately 20 times slower than the \passthrough{\lstinline!saxpy\_dot!} function.
+
+\hypertarget{openmp-parallelization}{%
+\subsection{OpenMP parallelization}\label{openmp-parallelization}}
+
+For parallelism, we add a directive \passthrough{\lstinline!\#pragma omp!} as well as additional clauses and wrap the code which we want to parallize inside a double bracket \passthrough{\lstinline!\{\}!}. A link to github with full source code will be provided at the end of the report. For performance comparision, we will study it in the next sections.
+
+\hypertarget{cache-blocking}{%
+\subsection{Cache blocking}\label{cache-blocking}}
 
 \end{document}
