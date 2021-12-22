@@ -26,7 +26,6 @@ knitr::opts_chunk$set(fig.align = "center")
 options(width=80)
 
 library(reticulate)
-use_python("/Users/vovannghia/programming/.venvs/sci/bin/python")
 
 to_float_str <- function(num) {
   return(gsub("\\.", ",", num))
@@ -38,9 +37,12 @@ import itertools
 import os
 import subprocess
 import sys
+from typing import List, Literal, Optional
 
 import numpy as np
 import pandas as pd
+
+DF = None
 
 
 def init_matrix(nrow: int, ncol: int, coff: float):
@@ -71,17 +73,57 @@ def pmatrix(a: np.ndarray):
     return latex
 
 
-def compile_and_run(
+def get_database():
+    global DF
+    if DF is None:
+        if os.path.exists(".local.runtime.csv"):
+            DF = pd.read_csv(".local.runtime.csv")
+        else:
+            DF = pd.DataFrame(
+                [
+                    {
+                        "Technique": "naive",
+                        "Time": 0,
+                        "Norm": 0,
+                        "Gflops": 0,
+                        "M": 0,
+                        "K": 0,
+                        "N": 0,
+                        "Block": 0,
+                        "OMP": False,
+                        "Threads": 0,
+                        "Schedule": "static",
+                        "Chunk": 0,
+                    }
+                ]
+            )
+    return DF
+
+
+def insert_database(items: pd.DataFrame):
+    global DF
+    DF = pd.concat([DF, items], ignore_index=True)
+
+
+def save_database():
+    global DF
+    DF.to_csv(".local.runtime.csv", index=False)
+
+
+def compile_raw_output(
     M: int = 4,
     K: int = 8,
     N: int = 4,
     block: int = 4,
-    omp: bool = True,
-    num_threads=None,
-    schedule=None,
-    raw_only=False,
-    need_cache=True,
-    **kwargs,
+    omp: bool = False,
+    num_threads: Optional[int] = None,
+    schedule: Optional[Literal["static", "dynamic", "guided", "auto"]] = None,
+    chunk: Optional[int] = None,
+    naive: bool = False,
+    saxpy: bool = False,
+    tiled: bool = False,
+    blas: bool = False,
+    printarray: bool = False,
 ):
     command = "clang" if sys.platform == "darwin" else "gcc"
     args = [command, "-o", "blas3", "blas3.c", "-O3", "-lblas", "-fopenmp", "-lm"]
@@ -91,19 +133,20 @@ def compile_and_run(
     args.append(f"-D N_HPC={N}")
     args.append(f"-D BLOCK_HPC={block}")
 
-    if not kwargs.get("printarray"):
-        args.append("-D NO_PRINT_ARRAY")
     if not omp:
         args.append("-D NO_OMP")
 
-    if not need_cache and not kwargs.get("naive"):
+    if not naive:
         args.append("-D NO_NAIVE_DOT")
-    if not need_cache and not kwargs.get("saxpy"):
+    if not saxpy:
         args.append("-D NO_SAXPY_DOT")
-    if not need_cache and not kwargs.get("blocking"):
+    if not tiled:
         args.append("-D NO_BLOCKING_DOT")
-    if not need_cache and not kwargs.get("blas"):
+    if not blas:
         args.append("-D NO_BLAS_DOT")
+
+    if not printarray:
+        args.append("-D NO_PRINT_ARRAY")
 
     if sys.platform == "darwin":
         args += [
@@ -113,35 +156,23 @@ def compile_and_run(
 
     subprocess.run([" ".join(args)], shell=True)
 
-    raw_output = ""
-    log_path = f".local.{M}.{K}.{N}.{block}.{omp}.{num_threads}.{schedule}.log"
-    if os.path.exists(log_path):
-        with open(log_path, "r") as f:
-            raw_output = f.read()
-    else:
-        run_envs = os.environ.copy()
-        if num_threads:
-            run_envs["OMP_NUM_THREADS"] = str(num_threads)
-        if schedule:
-            run_envs["OMP_SCHEDULE"] = schedule
-        raw_output = subprocess.run(
-            "./blas3", capture_output=True, env=run_envs
-        ).stdout.decode("utf-8")
-        if need_cache:
-            with open(log_path, "w") as f:
-                f.write(raw_output)
+    run_envs = os.environ.copy()
+    if num_threads:
+        run_envs["OMP_NUM_THREADS"] = str(num_threads)
+    if schedule:
+        run_envs["OMP_SCHEDULE"] = f"{schedule},{chunk}"
+    return (
+        subprocess.run("./blas3", capture_output=True, env=run_envs)
+        .stdout.decode("utf-8")
+        .splitlines()
+    )
 
-    if raw_only:
-        return raw_output
 
-    outputs = raw_output.splitlines()
-    res = []
-    i = 0
+def parse_schedule_and_num_threads(outputs: List[str]):
     num_threads = 0
-    schedule = ""
+    schedule: Literal["static", "dynamic", "guided", "auto"] = "static"
     chunk = 0
-    while i < len(outputs):
-        output = outputs[i].strip()
+    for output in outputs:
         if output.startswith("Parallel execution with a maximum of "):
             raw_num_threads = output[len("Parallel execution with a maximum of ") :]
             num_threads = int(
@@ -150,38 +181,186 @@ def compile_and_run(
         elif output.startswith("Scheduling "):
             lhs, rhs = output.split(" = ")
             raw_schedule = lhs[len("Scheduling ") :]
-            schedule = "".join(itertools.takewhile(str.isalpha, raw_schedule))
+            schedule = "".join(itertools.takewhile(str.isalpha, raw_schedule))  # type: ignore
             chunk = int(rhs)
-        elif output.startswith("Total time "):
+    return num_threads, schedule, chunk
+
+
+def parse_computation_output(
+    outputs: List[str],
+    M: int,
+    K: int,
+    N: int,
+    block: int,
+    omp: bool,
+    num_threads: int,
+    schedule: Literal["static", "dynamic", "guided", "auto"],
+    chunk: int,
+):
+    result = []
+    i = 0
+    while i < len(outputs):
+        output = outputs[i].strip()
+        if output.startswith("Total time "):
             lhs, rhs = output.split(" = ")
-            name = lhs[len("Total time ") :].strip().capitalize()
-            if kwargs.get(name.lower()):
-                time = float(rhs)
-                lhs, rhs = outputs[i - 1].strip().split(" = ")
-                norm = float(rhs)
-                lhs, rhs = outputs[i + 1].strip().split(" = ")
-                gflops = float(rhs)
-                res.append(
-                    {
-                        "Technique": name,
-                        "Time": time,
-                        "Norm": norm,
-                        "Gflops": gflops,
-                        "M": M,
-                        "K": K,
-                        "N": N,
-                        "Block": block,
-                        "OMP": omp,
-                        "Threads": num_threads,
-                        "Schedule": schedule,
-                        "Chunk": chunk,
-                    }
-                )
-            i = i + 2
-            continue
+            name: Literal["naive", "saxpy", "tiled", "blas"] = lhs[len("Total time ") :].strip().lower()  # type: ignore
+            time = float(rhs)
+            lhs, rhs = outputs[i - 1].strip().split(" = ")
+            norm = float(rhs)
+            lhs, rhs = outputs[i + 1].strip().split(" = ")
+            gflops = float(rhs)
+            result.append(
+                {
+                    "Technique": name,
+                    "Time": time,
+                    "Norm": norm,
+                    "Gflops": gflops,
+                    "M": M,
+                    "K": K,
+                    "N": N,
+                    "Block": block,
+                    "OMP": omp,
+                    "Threads": num_threads,
+                    "Schedule": schedule,
+                    "Chunk": chunk,
+                }
+            )
+            i = i + 1
         i = i + 1
-    df = pd.DataFrame(res)
-    return df, raw_output
+    return result
+
+
+def get_default_omp_options():
+    outputs = compile_raw_output()
+    return parse_schedule_and_num_threads(outputs)
+
+
+def query(
+    names: List[Literal["naive", "saxpy", "tiled", "blas"]],
+    db: pd.DataFrame,
+    M: int,
+    K: int,
+    N: int,
+    block: Optional[int],
+    omp: Optional[bool],
+    num_threads: Optional[int],
+    schedule: Optional[Literal["static", "dynamic", "guided", "auto"]],
+    chunk: Optional[int],
+):
+    conditions = (db.M == M) & (db.K == K) & (db.N == N)
+    conditions = conditions if block is None else conditions & (db.Block == block)
+    conditions = conditions if omp is None else conditions & (db.OMP == omp)
+    conditions = (
+        conditions if num_threads is None else conditions & (db.Threads == num_threads)
+    )
+    conditions = (
+        conditions if schedule is None else conditions & (db.Schedule == schedule)
+    )
+    conditions = conditions if chunk is None else conditions & (db.Chunk == chunk)
+    conditions &= db.Technique.isin(names)
+
+    return db[conditions]
+
+
+def compile_and_run(
+    M: int = 4,
+    K: int = 8,
+    N: int = 4,
+    block: int = 4,
+    omp: bool = False,
+    num_threads: Optional[int] = None,
+    schedule: Optional[Literal["static", "dynamic", "guided", "auto"]] = None,
+    chunk: Optional[int] = None,
+    naive: bool = False,
+    saxpy: bool = False,
+    tiled: bool = False,
+    blas: bool = False,
+    printarray: bool = False,
+):
+    default_num_threads, default_schedule, default_chunk = get_default_omp_options()
+    num_threads = num_threads if num_threads else default_num_threads
+    schedule = schedule if schedule else default_schedule
+    chunk = chunk if chunk else default_chunk
+
+    names: List[Literal["naive", "saxpy", "tiled", "blas"]] = []
+    if naive:
+        names.append("naive")
+    if saxpy:
+        names.append("saxpy")
+    if tiled:
+        names.append("tiled")
+    if blas:
+        names.append("blas")
+
+    db = get_database()
+
+    items = query(["naive"], db, M, K, N, None, omp, num_threads, schedule, chunk)
+    if not items.empty:
+        if naive:
+            if (items.Block != block).all():
+                res = pd.DataFrame(items.tail(1)).reset_index(drop=True)
+                res.loc[0, "Block"] = block
+                insert_database(res)
+        naive = False
+
+    items = query(["saxpy"], db, M, K, N, None, omp, num_threads, schedule, chunk)
+    if not items.empty:
+        if saxpy:
+            if (items.Block != block).all():
+                res = pd.DataFrame(items.tail(1)).reset_index(drop=True)
+                res.loc[0, "Block"] = block
+                insert_database(res)
+        saxpy = False
+
+    items = query(["tiled"], db, M, K, N, block, omp, num_threads, schedule, chunk)
+    if not items.empty:
+        tiled = False
+
+    items = query(["blas"], db, M, K, N, None, None, None, None, None)
+    if not query(["blas"], db, M, K, N, None, None, None, None, None).empty:
+        if blas:
+            res = pd.DataFrame(items.tail(1)).reset_index(drop=True)
+            insert = query(
+                ["blas"], db, M, K, N, block, omp, num_threads, schedule, chunk
+            ).empty
+            if insert:
+                res.loc[0, "Block"] = block
+                res.loc[0, "OMP"] = omp
+                res.loc[0, "Threads"] = num_threads
+                res.loc[0, "Schedule"] = schedule
+                res.loc[0, "Chunk"] = chunk
+                insert_database(res)
+        blas = False
+
+    outputs = compile_raw_output(
+        M,
+        K,
+        N,
+        block,
+        omp,
+        num_threads,
+        schedule,
+        chunk,
+        naive,
+        saxpy,
+        tiled,
+        blas,
+        printarray,
+    )
+    results = pd.DataFrame(
+        parse_computation_output(
+            outputs, M, K, N, block, omp, num_threads, schedule, chunk
+        )
+    )
+    insert_database(results)
+    save_database()
+
+    df = pd.DataFrame(
+        query(names, db, M, K, N, block, omp, num_threads, schedule, chunk)
+    ).reset_index(drop=True)
+    df.Technique = pd.Categorical(df.Technique, ["naive", "saxpy", "tiled", "blas"])
+    df.sort_values(["M", "K", "N", "OMP", "Block", "Technique"])
+    return df
 
 ```
 
@@ -199,9 +378,9 @@ for (i = 0; i < M; i++)
 Below is the output of `naive_dot` for `M = 1`, `K = 2`, `N = 2`:
 ```{python echo=FALSE}
 print(
-  compile_and_run(
-    1, 2, 2, omp=False, raw_only=True, printarray=True, naive=True, need_cache=False
-  )
+  "\n".join(compile_raw_output(
+    1, 2, 2, omp=False, printarray=True, naive=True
+  ))
 )
 ```
 As
@@ -229,9 +408,9 @@ for (k = 0; k < K; k++)
     for (i = 0; i < M; i++) C[i + ldc * j] += A[i + lda * k] * B[k + ldb * j];
 ```
 
-For comparision, we have a table below with small `M`, `K`, `N` (`OMP` indicates if we enable `Open MP` or not).
+For comparision, we have a table below with small `M`, `K`, `N` (`OMP` indicates if we enable `OpenMP` or not).
 ```{python include=FALSE}
-small_naive_saxpy_df, small_naive_saxpy_output = compile_and_run(
+small_naive_saxpy_df = compile_and_run(
   4, 8, 4, omp=False, printarray=True, naive=True, saxpy=True
 )
 ```
@@ -250,11 +429,8 @@ We have the frobenius norm of both techniques are `r to_float_str(py$small_naive
 
 However, if we set `M`, `K`, `N` to 2048. There will be a huge performance gain as in the table shown below.
 ```{python include=FALSE}
-M = 2048
-K = 2048
-N = 2048
-big_naive_saxpy_df, big_naive_saxpy_output = compile_and_run(
-  2048, 2048, 2048, omp=False, printarray=False, naive=True, saxpy=True
+big_naive_saxpy_df = compile_and_run(
+  2048, 2048, 2048, omp=False, naive=True, saxpy=True
 )
 ```
 ```{r echo=FALSE}
@@ -272,6 +448,111 @@ Here, the `naive_dot` function is approximately `r round(py$big_naive_saxpy_df$T
 
 ## OpenMP parallelization
 
-For parallelism, we add a directive `#pragma omp` as well as additional clauses and wrap the code which we want to parallize inside a double bracket `{}`. A link to github with full source code will be provided at the end of the report. For performance comparision, we will study it in the next sections.
+For parallelism, we add a directive `#pragma omp parallel for schedule(runtime) default(shared)` and `private(i, j, k)` depending on which variables we want to make private. A special clause `reduction(+ : norm)` is added to `norm` function as we want to sum all the `norm` from each thread to only one variable. A link to github with full source code will be provided at the end of the report. For performance comparision, we will show only one case here. More detailed study will be presented in the next sections.
+
+```{python include=FALSE}
+big_omp_naive_saxpy_df = compile_and_run(
+  2048, 2048, 2048, omp=True, naive=True, saxpy=True
+)
+```
+```{r echo=FALSE}
+rbind(py$big_naive_saxpy_df, py$big_omp_naive_saxpy_df) %>%
+  mutate(OMP = ifelse(OMP, "T", "F")) %>%
+  kbl(
+    booktabs = T,
+    format.args = list(scientific = FALSE)
+  ) %>% 
+  kable_styling(latex_options = c("hold_position", "scale_down"))
+```
 
 ## Cache blocking
+
+The main idea of the cache blocking technique (or tiled) is breaking the whole matrices into smaller sub-matrices so the data needed for one multiplication operation could fit into the cache, therefore leads to a much faster calculation. Furthermore, if we enable `OpenMP`, the computation would be even faster as each sub-matrice is processed by a separate thread. However, if we set `BLOCK` size too small, the benefit of dividing matrix is overshadowed by the additional loops and operations. Meanwhile, a too large `BLOCK` size leads to an overfitting (data for one operation can not be fitted into the cache), and therefore a slower operation. The principal source code is shown below:
+
+```{c eval=FALSE}
+for (k = 0; k < K; k += BLOCK) {
+  for (j = 0; j < N; j += BLOCK) {
+    for (i = 0; i < M; i += BLOCK) {
+      int kmin = fmin(K - k, BLOCK);
+      for (kk = 0; kk < kmin; kk++) {
+        int jmin = fmin(N - j, BLOCK);
+        for (jj = 0; jj < jmin; jj++) {
+          int imin = fmin(M - i, BLOCK);
+          for (ii = 0; ii < imin; ii++) {
+            C[(ii + i) + ldc * (jj + j)] +=
+                A[(ii + i) + lda * (kk + k)] * B[(kk + k) + ldb * (jj + j)];
+          }
+        }
+      }
+    }
+  }
+}
+```
+```{python include=FALSE}
+blocking_df = compile_and_run(
+  2048, 2048, 2048, 256, omp=False, naive=True, saxpy=True, tiled=True,
+)
+blocking_omp_df = compile_and_run(
+  2048, 2048, 2048, 256, omp=True, naive=True, saxpy=True, tiled=True,
+)
+```
+
+In addition, we see in the table below that we have `r to_float_str(round(py$blocking_df$Time[2]/py$blocking_df$Time[3], 2))` times faster with the non `OpenMP` version and `r to_float_str(round(py$blocking_omp_df$Time[2]/py$blocking_omp_df$Time[3], 2))` times with `OpenMP`.
+
+```{r echo=FALSE}
+rbind(py$blocking_df, py$blocking_omp_df) %>%
+  mutate(OMP = ifelse(OMP, "T", "F")) %>%
+  kbl(
+    booktabs = T,
+    format.args = list(scientific = FALSE),
+    linesep = c("", "", "\\addlinespace")
+  ) %>% 
+  kable_styling(latex_options = c("hold_position", "scale_down"))
+```
+
+## BLAS
+
+One last technique that is used in our code is calling the `cblas_dgemm` function which use the optimized BLAS implementation. This function is the fastest method even if other methods are *"cheated"* (by using `OpenMP`)  as their implementation is optimized based on many factors: algorithms, software and hardware.
+```{python include=FALSE}
+all_df = compile_and_run(
+  2048, 2048, 2048, 256, omp=True, naive=True, saxpy=True, tiled=True, blas=True,
+)
+```
+```{r echo=FALSE}
+py$all_df %>%
+  mutate(OMP = ifelse(OMP, "T", "F")) %>%
+  kbl(
+    booktabs = T,
+    format.args = list(scientific = FALSE)
+  ) %>% 
+  kable_styling(latex_options = c("hold_position", "scale_down"))
+```
+
+# Sequential
+
+In this section, we fix `OMP_NUM_TREADS=1` for each run and vary matrix size and blocking size (We don't care about schedule and chunk size because there is only 1 thread).
+
+## M = K = N
+
+First, we consider the case where M and K and N are all equal and equal to a $2^s$. The blocking size is also supposed to be in a form of $2^t$. In addition, as `OMP_NUM_TREADS=1` is essentially the same logic as non `OpenMP` version, we will include a non `OpenMP` result for studying how the overhead time of `OpenMP` impact the overall performance.
+
+```{python include=FALSE}
+omp_dfs = []
+non_omp_dfs = []
+for s in range(1, 12):
+    for t in range(0, 11):
+        M = N = K = 2 ** s
+        block = 2 ** t
+        omp_dfs.append(
+            compile_and_run(
+                M, N, K, block, True, 1, naive=True, saxpy=True, tiled=True, blas=True
+            )
+        )
+        non_omp_dfs.append(
+            compile_and_run(
+                M, N, K, block, False, 1, naive=True, saxpy=True, tiled=True, blas=True
+            )
+        )
+omp_df = pd.concat(omp_dfs)
+non_omp_df = pd.concat(non_omp_dfs)
+```
