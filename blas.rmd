@@ -560,7 +560,9 @@ py$all_df %>%
   kable_styling(latex_options = c("hold_position", "scale_down"))
 ```
 
-# Sequential
+# Benchmarks
+
+## Sequential
 
 In this section, we fix `OMP_NUM_TREADS=1` for each run and vary the matrix size. (We don't care about schedule because there is only 1 thread).
 
@@ -646,9 +648,13 @@ part2[part2$Block == 256,] %>%
     scale_color_manual(values = rainbow(4))
 ```
 
-# Threading
+## Threading
+```{python include=FALSE}
+M_thread = K_thread = N_thread = 2048
+block_thread = 256
+```
 
-Right now, we want to see the true power of parallelism, we will fix matrix size to `M` = `K` = `N` = 2048, `block` to 256, and vary the number of threads.
+Right now, we want to see the true power of parallelism, we will fix matrix size to `M` = `K` = `N` = `r py$M_thread`, `BLOCK` size to `r py$block_thread`, and vary the number of threads.
 
 ```{python include=FALSE}
 thread_df = None
@@ -661,10 +667,10 @@ else:
         num_threads = 2 ** i
         thread_dfs.append(
             compile_and_run(
-                2048,
-                2048,
-                2048,
-                256,
+                M_thread,
+                K_thread,
+                N_thread,
+                block_thread,
                 True,
                 num_threads,
                 "static",
@@ -677,10 +683,10 @@ else:
         )
         thread_dfs.append(
             compile_and_run(
-                2048,
-                2048,
-                2048,
-                256,
+                M_thread,
+                K_thread,
+                N_thread,
+                block_thread,
                 True,
                 num_threads,
                 "dynamic",
@@ -693,10 +699,10 @@ else:
         )
         thread_dfs.append(
             compile_and_run(
-                2048,
-                2048,
-                2048,
-                256,
+                M_thread,
+                K_thread,
+                N_thread,
+                block_thread,
                 True,
                 num_threads,
                 "guided",
@@ -709,10 +715,10 @@ else:
         )
         thread_dfs.append(
             compile_and_run(
-                2048,
-                2048,
-                2048,
-                256,
+                M_thread,
+                K_thread,
+                N_thread,
+                block_thread,
                 True,
                 num_threads,
                 "auto",
@@ -762,9 +768,13 @@ part3 %>%
 
 Finally, more threads **doesn't** always mean better performance. After we increased thread to 2, time taking for one multiplication fluctuates but does not have any real decline. The reason is there are only 2 physical cores on this computer, when the number of threads goes up too high, the overhead in creating and synchronize threads will overshadowed any benefits we gain.
 
-# Blocking
+## Blocking
+```{python include=FALSE}
+M_block = K_block = N_block = 2048
+num_threads_block = 4
+```
 
-In the last section, we will concentrate ourselves on the impact of `BLOCK` size to overall performance. We will fix `M` = `K` = `N` = 2048, number of threads to 4, `static` schedule and vary the `BLOCK` size.
+In the last section, we will concentrate ourselves on the impact of `BLOCK` size to overall performance. We will fix `M` = `K` = `N` = `r py$M_block`, number of threads to `r py$num_threads_block`, `static` schedule and vary the `BLOCK` size.
 
 ```{python include=FALSE}
 block_df = None
@@ -777,12 +787,12 @@ else:
         block = 2 ** i
         block_dfs.append(
             compile_and_run(
-                4096,
-                4096,
-                4096,
+                M_block,
+                K_block,
+                N_block,
                 block,
                 True,
-                4,
+                num_threads_block,
                 "static",
                 0,
                 saxpy=True,
@@ -792,12 +802,12 @@ else:
         )
         block_dfs.append(
             compile_and_run(
-                4096,
-                4096,
-                4096,
+                M_block,
+                K_block,
+                N_block,
                 block,
                 False,
-                4,
+                num_threads_block,
                 "static",
                 0,
                 saxpy=True,
@@ -833,7 +843,7 @@ part4 %>%
 
 We see clearly that as `BLOCK` size grows, the performance becomes better but get worse after `BLOCK` size grows to approximately $2^10$. As explained in the [section 1](#cache-blocking), `BLOCK` should not be too small and neither too large.
 
-# Conslusion
+# Conclusion
 
 Throughout the report, it is shown clearly that there are many techniques to speed up our code. Depending on each problem and resources, we could also have a combination of all these techniques as well as having a detail benchmark to achive the best possible performance.
 
@@ -916,7 +926,7 @@ free(a);
 free(b);
 free(c);
 ```
-in the end for preventing memory leaks.
+at the end for preventing memory leaks.
 
 ## Source code {-}
 
