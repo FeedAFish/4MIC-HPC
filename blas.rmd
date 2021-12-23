@@ -21,6 +21,17 @@ output:
 library(kableExtra)
 library(dplyr)
 library(stringi)
+library(scales)
+
+library(ggplot2)
+library(hrbrthemes)
+theme_set(
+    theme_ipsum(base_family = "") + 
+    theme(
+        axis.title.x = element_text(hjust = 0.5, size = 11),
+        axis.title.y = element_text(hjust = 0.5, size = 11),
+    )
+)
 
 knitr::opts_chunk$set(fig.align = "center")
 options(width=80)
@@ -30,6 +41,8 @@ library(reticulate)
 to_float_str <- function(num) {
   return(gsub("\\.", ",", num))
 }
+
+colnames = c("Technique", "Time ($s$)", "$\\|.\\|_F$", "$GFlop/s$", "M", "K", "N", "Block", "OMP", "Threads", "Schedule", "Chunk")
 ```
 
 ```{python include=FALSE}
@@ -66,7 +79,7 @@ def pmatrix(a: np.ndarray):
             else:
                 latex += str(a[i, j]).replace(".", ",")
             if j != ncol - 1:
-                latex += " && "
+                latex += " & "
         if i != nrow - 1:
             latex += r"\\" + "\n"
     latex += "\n" + r"\end{pmatrix}"
@@ -124,9 +137,11 @@ def compile_raw_output(
     tiled: bool = False,
     blas: bool = False,
     printarray: bool = False,
+    sourcepath: str = "blas3.c",
+    executable: str = "blas3",
 ):
     command = "clang" if sys.platform == "darwin" else "gcc"
-    args = [command, "-o", "blas3", "blas3.c", "-O3", "-lblas", "-fopenmp", "-lm"]
+    args = [command, "-o", executable, sourcepath, "-O3", "-lblas", "-fopenmp", "-lm"]
 
     args.append(f"-D M_HPC={M}")
     args.append(f"-D K_HPC={K}")
@@ -162,7 +177,7 @@ def compile_raw_output(
     if schedule:
         run_envs["OMP_SCHEDULE"] = f"{schedule},{chunk}"
     return (
-        subprocess.run("./blas3", capture_output=True, env=run_envs)
+        subprocess.run(f"./{executable}", capture_output=True, env=run_envs)
         .stdout.decode("utf-8")
         .splitlines()
     )
@@ -282,6 +297,10 @@ def compile_and_run(
     schedule = schedule if schedule else default_schedule
     chunk = chunk if chunk else default_chunk
 
+    logpath = f".local.{M}.{K}.{N}.{block}.{omp}.{num_threads}.{schedule}.{chunk}.{naive}.{saxpy}.{tiled}.{blas}.csv"
+    if os.path.exists(logpath):
+        return pd.read_csv(logpath)
+
     names: List[Literal["naive", "saxpy", "tiled", "blas"]] = []
     if naive:
         names.append("naive")
@@ -332,39 +351,42 @@ def compile_and_run(
                 insert_database(res)
         blas = False
 
-    outputs = compile_raw_output(
-        M,
-        K,
-        N,
-        block,
-        omp,
-        num_threads,
-        schedule,
-        chunk,
-        naive,
-        saxpy,
-        tiled,
-        blas,
-        printarray,
-    )
-    results = pd.DataFrame(
-        parse_computation_output(
-            outputs, M, K, N, block, omp, num_threads, schedule, chunk
+    if naive or saxpy or tiled or blas:
+        outputs = compile_raw_output(
+            M,
+            K,
+            N,
+            block,
+            omp,
+            num_threads,
+            schedule,
+            chunk,
+            naive,
+            saxpy,
+            tiled,
+            blas,
+            printarray,
         )
-    )
-    insert_database(results)
-    save_database()
+        results = pd.DataFrame(
+            parse_computation_output(
+                outputs, M, K, N, block, omp, num_threads, schedule, chunk
+            )
+        )
+        insert_database(results)
+        save_database()
 
+    db = get_database()
     df = pd.DataFrame(
         query(names, db, M, K, N, block, omp, num_threads, schedule, chunk)
     ).reset_index(drop=True)
     df.Technique = pd.Categorical(df.Technique, ["naive", "saxpy", "tiled", "blas"])
     df.sort_values(["M", "K", "N", "OMP", "Block", "Technique"])
+    df.to_csv(logpath, index=False)
     return df
 
 ```
 
-# Techniques
+# Techniques {#techniques}
 ## Naive dot
 
 We first mention here the original `naive_dot` function. This function serves as an anchor (or base case) for performance comparision as well as for making sure we have the right result when using other techniques.
@@ -420,7 +442,9 @@ py$small_naive_saxpy_df %>%
   mutate(OMP = ifelse(OMP, "T", "F")) %>%
   kbl(
     booktabs = T,
-    format.args = list(scientific = FALSE)
+    format.args = list(scientific = FALSE),
+    col.names = c(colnames[1:7], "OMP"),
+    escape = FALSE
   ) %>% 
   kable_styling(latex_options = c("hold_position", "scale_down"))
 ```
@@ -439,7 +463,9 @@ py$big_naive_saxpy_df %>%
   mutate(OMP = ifelse(OMP, "T", "F")) %>%
   kbl(
     booktabs = T,
-    format.args = list(scientific = FALSE)
+    format.args = list(scientific = FALSE),
+    col.names = c(colnames[1:7], "OMP"),
+    escape = FALSE
   ) %>% 
   kable_styling(latex_options = c("hold_position", "scale_down"))
 ```
@@ -460,12 +486,14 @@ rbind(py$big_naive_saxpy_df, py$big_omp_naive_saxpy_df) %>%
   mutate(OMP = ifelse(OMP, "T", "F")) %>%
   kbl(
     booktabs = T,
-    format.args = list(scientific = FALSE)
+    format.args = list(scientific = FALSE),
+    col.names = colnames,
+    escape=FALSE
   ) %>% 
   kable_styling(latex_options = c("hold_position", "scale_down"))
 ```
 
-## Cache blocking
+## Cache blocking {#cache-blocking}
 
 The main idea of the cache blocking technique (or tiled) is breaking the whole matrices into smaller sub-matrices so the data needed for one multiplication operation could fit into the cache, therefore leads to a much faster calculation. Furthermore, if we enable `OpenMP`, the computation would be even faster as each sub-matrice is processed by a separate thread. However, if we set `BLOCK` size too small, the benefit of dividing matrix is overshadowed by the additional loops and operations. Meanwhile, a too large `BLOCK` size leads to an overfitting (data for one operation can not be fitted into the cache), and therefore a slower operation. The principal source code is shown below:
 
@@ -473,11 +501,11 @@ The main idea of the cache blocking technique (or tiled) is breaking the whole m
 for (k = 0; k < K; k += BLOCK) {
   for (j = 0; j < N; j += BLOCK) {
     for (i = 0; i < M; i += BLOCK) {
-      int kmin = fmin(K - k, BLOCK);
+      int kmin = fmin(K - k, BLOCK); // in case K is not divisible by BLOCK
       for (kk = 0; kk < kmin; kk++) {
-        int jmin = fmin(N - j, BLOCK);
+        int jmin = fmin(N - j, BLOCK); // in case N is not divisible by BLOCK
         for (jj = 0; jj < jmin; jj++) {
-          int imin = fmin(M - i, BLOCK);
+          int imin = fmin(M - i, BLOCK); // in case M is not divisible by BLOCK
           for (ii = 0; ii < imin; ii++) {
             C[(ii + i) + ldc * (jj + j)] +=
                 A[(ii + i) + lda * (kk + k)] * B[(kk + k) + ldb * (jj + j)];
@@ -505,7 +533,9 @@ rbind(py$blocking_df, py$blocking_omp_df) %>%
   kbl(
     booktabs = T,
     format.args = list(scientific = FALSE),
-    linesep = c("", "", "\\addlinespace")
+    linesep = c("", "", "\\addlinespace"),
+    col.names = colnames,
+    escape = FALSE
   ) %>% 
   kable_styling(latex_options = c("hold_position", "scale_down"))
 ```
@@ -523,36 +553,319 @@ py$all_df %>%
   mutate(OMP = ifelse(OMP, "T", "F")) %>%
   kbl(
     booktabs = T,
-    format.args = list(scientific = FALSE)
+    format.args = list(scientific = FALSE),
+    col.names = colnames,
+    escape = FALSE
   ) %>% 
   kable_styling(latex_options = c("hold_position", "scale_down"))
 ```
 
 # Sequential
 
-In this section, we fix `OMP_NUM_TREADS=1` for each run and vary matrix size and blocking size (We don't care about schedule and chunk size because there is only 1 thread).
+In this section, we fix `OMP_NUM_TREADS=1` for each run and vary the matrix size. (We don't care about schedule because there is only 1 thread).
 
-## M = K = N
-
-First, we consider the case where M and K and N are all equal and equal to a $2^s$. The blocking size is also supposed to be in a form of $2^t$. In addition, as `OMP_NUM_TREADS=1` is essentially the same logic as non `OpenMP` version, we will include a non `OpenMP` result for studying how the overhead time of `OpenMP` impact the overall performance.
+For the sake of simplicity, we consider the case where M and K and N are all equal and equal to a $2^s$. The blocking size is also supposed to be in a form of $2^t$. In addition, as `OMP_NUM_TREADS=1` is essentially the same logic as non `OpenMP` version, we will include a non `OpenMP` result for studying how the overhead time of `OpenMP` impact the overall performance.
 
 ```{python include=FALSE}
-omp_dfs = []
-non_omp_dfs = []
-for s in range(1, 12):
-    for t in range(0, 11):
-        M = N = K = 2 ** s
-        block = 2 ** t
-        omp_dfs.append(
+omp_df = None
+omp_df_path = ".local.omp.df.csv"
+non_omp_df = None
+non_omp_df_path = ".local.non.omp.df.csv"
+if os.path.exists(omp_df_path) and os.path.exists(non_omp_df_path):
+    omp_df = pd.read_csv(omp_df_path)
+    non_omp_df = pd.read_csv(non_omp_df_path)
+else:
+    omp_dfs = []
+    non_omp_dfs = []
+    for s in range(1, 13):
+        for t in range(0, 11):
+            M = N = K = 2 ** s
+            block = 2 ** t
+            omp_dfs.append(
+                compile_and_run(
+                    M,
+                    N,
+                    K,
+                    block,
+                    True,
+                    1,
+                    naive=True,
+                    saxpy=True,
+                    tiled=True,
+                    blas=True,
+                )
+            )
+            non_omp_dfs.append(
+                compile_and_run(
+                    M,
+                    N,
+                    K,
+                    block,
+                    False,
+                    1,
+                    naive=True,
+                    saxpy=True,
+                    tiled=True,
+                    blas=True,
+                )
+            )
+    omp_df = pd.concat(omp_dfs, ignore_index=True)
+    omp_df.to_csv(omp_df_path, index=False)
+    non_omp_df = pd.concat(non_omp_dfs, ignore_index=True)
+    non_omp_df.to_csv(non_omp_df_path, index=False)
+
+omp_df.Technique = pd.Categorical(omp_df.Technique, ["naive", "saxpy", "tiled", "blas"])
+non_omp_df.Technique = pd.Categorical(non_omp_df.Technique, ["naive", "saxpy", "tiled", "blas"])
+
+```
+
+In the graph below, we see that the fastest method is no doubt `blas` method, followed by `tiled` (with a block of 256). The third fastest method is `saxpy` and the slowest is `naive`. This is aligned with what we see in the [section 1](#techniques). In addition, the time for calculating matrices whose size is less than $2^{10} = 1024$ is around 5 $s$ for all methods. This could be explained by the fact that these matrices could be fitted entierly into the cache, which leads to a significant drop in computation time.
+
+Another property that could be interesting is the version with `OpenMP` is close or even faster than the non `OpenMP` version regardless the overhead of parallelization. This could be explained by many factors ^[https://stackoverflow.com/questions/22927973/openmp-with-single-thread-versus-without-openmp] ^[https://stackoverflow.com/questions/2915390/openmp-num-threads1-executes-faster-than-no-openmp], but the most significant one is As `OpenMP` is just API specification and C compilers are free to implement it in any way they want as long as they respect the specification, many compilers (notably modern `gcc` and `clang`) are smart enough to treat `OpenMP` version of only 1 thread the same as the sequential version. Therefore, we only see a small difference between each run. If we run both versions enough times, the average time of both will be the same.
+
+```{r echo=FALSE}
+part2 = rbind(py$omp_df, py$non_omp_df)
+```
+```{r echo=FALSE, fig.cap="Computation time in function of matrix size and technique"}
+part2[part2$Block == 256,] %>%
+    ggplot(aes(x = M, y = Time, shape = OMP, color = Technique, group = interaction(OMP, Technique))) +
+    geom_line(alpha = 0.75) +
+    geom_point(size = 2, alpha = 0.9) +
+    scale_x_continuous(
+      trans = log2_trans(),
+      breaks = trans_breaks("log2", function(x) 2^x),
+      labels = trans_format("log2", math_format(2^.x))
+    ) +
+    scale_y_continuous(
+      breaks = breaks_width(300),
+      minor_breaks = breaks_width(60),
+    ) +
+    xlab("M = K = N") +
+    ylab("Time (s)") +
+    theme(legend.position="bottom") +
+    scale_color_manual(values = rainbow(4))
+```
+
+# Threading
+
+Right now, we want to see the true power of parallelism, we will fix matrix size to `M` = `K` = `N` = 2048, `block` to 256, and vary the number of threads.
+
+```{python include=FALSE}
+thread_df = None
+thread_df_path = ".local.thread.df.csv"
+if os.path.exists(thread_df_path):
+    thread_df = pd.read_csv(thread_df_path)
+else:
+    thread_dfs = []
+    for i in range(0, 8):
+        num_threads = 2 ** i
+        thread_dfs.append(
             compile_and_run(
-                M, N, K, block, True, 1, naive=True, saxpy=True, tiled=True, blas=True
+                2048,
+                2048,
+                2048,
+                256,
+                True,
+                num_threads,
+                "static",
+                0,
+                naive=True,
+                saxpy=True,
+                tiled=True,
+                blas=True,
             )
         )
-        non_omp_dfs.append(
+        thread_dfs.append(
             compile_and_run(
-                M, N, K, block, False, 1, naive=True, saxpy=True, tiled=True, blas=True
+                2048,
+                2048,
+                2048,
+                256,
+                True,
+                num_threads,
+                "dynamic",
+                1,
+                naive=True,
+                saxpy=True,
+                tiled=True,
+                blas=True,
             )
         )
-omp_df = pd.concat(omp_dfs)
-non_omp_df = pd.concat(non_omp_dfs)
+        thread_dfs.append(
+            compile_and_run(
+                2048,
+                2048,
+                2048,
+                256,
+                True,
+                num_threads,
+                "guided",
+                1,
+                naive=True,
+                saxpy=True,
+                tiled=True,
+                blas=True,
+            )
+        )
+        thread_dfs.append(
+            compile_and_run(
+                2048,
+                2048,
+                2048,
+                256,
+                True,
+                num_threads,
+                "auto",
+                1,
+                naive=True,
+                saxpy=True,
+                tiled=True,
+                blas=True,
+            )
+        )
+    thread_df = pd.concat(thread_dfs, ignore_index=True)
+    thread_df.to_csv(thread_df_path, index=False)
+
+thread_df.Technique = pd.Categorical(
+    thread_df.Technique, ["naive", "saxpy", "tiled", "blas"]
+)
+thread_df.Schedule = pd.Categorical(
+    thread_df.Schedule, ["static", "dynamic", "guided", "auto"]
+)
+
+```
+
+We see that although the distance between are relatively small, `blas` method is still the fastest regardless the number of threads. It shows that in order to achieve high speed computation, we have to not only parallelize, but also make improvements on multiplication algorithms, memory accesses and even use assembly instructions.
+
+In addition, the 4 schedule lines of each technique are overlapping each others and there are only very small difference in term of computational time. Except `blas` method which is not affected by the schedule options, the phenomenon happened because our problem (matrix multiplication) has a nearly the same workload at each iterations. That means the first iteration will take almost the same as the last iteration or any other iterations. For each schedule:
+
+- `static` evenly-divides the total workloads into each threads, which is the best schedule for our problem.
+-  `dynamic` and `guided` are designed for different situation, where each iteration takes different amount of time to finish their work. There is overhead compared to `static`, however, it does not have big effect on overall performance as our matrices are not too big.
+- `auto` lets the compiler choose how to schedule and divide work among threads, so it is compiler-specific. For example, `gcc` maps `auto` to `static` ^[https://github.com/gcc-mirror/gcc/blob/61e53698a08dc1d9a54d785218af687a6751c1b3/libgomp/loop.c#L195-L198], at a consequence, we see a similar pattern with `static`.
+
+```{r echo=FALSE}
+part3 = py$thread_df
+part3 %>%
+    ggplot(aes(x = Threads, y = Time, shape = Schedule, color = Technique, group = interaction(Schedule, Technique))) +
+    geom_line(alpha = 0.75) +
+    geom_point(size = 2, alpha = 0.9) +
+    scale_x_continuous(
+      trans = log2_trans(),
+      breaks = trans_breaks("log2", function(x) 2^x),
+      labels = trans_format("log2", math_format(2^.x))
+    ) +
+    xlab("Number of threads") +
+    ylab("Time (s)") +
+    theme(legend.position="bottom", legend.box = "vertical") +
+    scale_color_manual(values = rainbow(4))
+```
+
+Finally, more threads **doesn't** always mean better performance. After we increased thread to 2, time taking for one multiplication fluctuates but does not have any real decline. The reason is there are only 2 physical cores on this computer, when the number of threads goes up too high, the overhead in creating and synchronize threads will overshadowed any benefits we gain.
+
+# Blocking
+
+In the last section, we will concentrate ourselves on the impact of `BLOCK` size to overall performance. We will fix `M` = `K` = `N` = 2048, number of threads to 4, `static` schedule and vary the `BLOCK` size.
+
+```{python include=FALSE}
+block_df = None
+block_df_path = ".local.block.df.csv"
+if os.path.exists(block_df_path):
+    block_df = pd.read_csv(block_df_path)
+else:
+    block_dfs = []
+    for i in range(0, 12):
+        block = 2 ** i
+        block_dfs.append(
+            compile_and_run(
+                4096,
+                4096,
+                4096,
+                block,
+                True,
+                4,
+                "static",
+                0,
+                saxpy=True,
+                tiled=True,
+                blas=True,
+            )
+        )
+        block_dfs.append(
+            compile_and_run(
+                4096,
+                4096,
+                4096,
+                block,
+                False,
+                4,
+                "static",
+                0,
+                saxpy=True,
+                tiled=True,
+                blas=True,
+            )
+        )
+    block_df = pd.concat(block_dfs, ignore_index=True)
+    block_df.to_csv(block_df_path, index=False)
+
+block_df.Technique = pd.Categorical(
+    block_df.Technique, ["naive", "saxpy", "tiled", "blas"]
+)
+
+```
+
+```{r echo=FALSE}
+part4 = py$block_df
+part4 %>%
+    ggplot(aes(x = Block, y = Time, shape = OMP, color = Technique, group = interaction(OMP, Technique))) +
+    geom_line(alpha = 0.75) +
+    geom_point(size = 2, alpha = 0.9) +
+    scale_x_continuous(
+      trans = log2_trans(),
+      breaks = trans_breaks("log2", function(x) 2^x),
+      labels = trans_format("log2", math_format(2^.x))
+    ) +
+    xlab("Block size") +
+    ylab("Time (s)") +
+    theme(legend.position="bottom") +
+    scale_color_manual(values = rainbow(4)[2:5])
+```
+
+We see clearly that as `BLOCK` size grows, the performance becomes better but get worse after `BLOCK` size grows to approximately $2^10$. As explained in the [section 1](#cache-blocking), `BLOCK` should not be too small and neither too large.
+
+# Conslusion
+
+Throughout the report, it is shown clearly that there are many techniques to speed up our code. Depending on each problem and resources, we could also have a combination of all these techniques as well as having a detail benchmark to achive the best possible performance.
+
+\newpage
+
+# Appendix A: `blas3.c` {-}
+
+We also like to include a part which details our experiences when working on this report.
+
+## Mistake between `M` and `N` {-}
+
+Initially, when we set `M` = 1, `K` = 2, `N` = 2, we have this output:
+```{python echo=FALSE}
+print(
+  "\n".join(compile_raw_output(
+    1, 2, 2, omp=False, printarray=True, naive=True, saxpy=True, tiled=True, blas=True, sourcepath="blas3_moodle.c", executable="blas3_moodle"
+  ))
+)
+```
+
+The result should be
+```{python results="asis", echo=FALSE}
+print("\\(" + pmatrix(naive_a @ naive_b).replace("\n", "") + "\\)", end="")
+```
+. Furthermore, the function signatures of `norm` and `printarray` are:
+```
+double norm(int nrow, int ncol, int ld, double *A);
+void print_array(int nrow, int ncol, int ld, double *A);
+```
+However, we found below this piece of code that suggests there maybe a mistake between `M` and `N`
+```
+printf("Frobenius Norm   = %f\n", norm(N, M, ldc, c));
+// ...
+print_array(M, N, ldc, c);
 ```
