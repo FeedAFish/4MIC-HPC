@@ -433,7 +433,7 @@ for (k = 0; k < K; k++)
 For comparision, we have a table below with small `M`, `K`, `N` (`OMP` indicates if we enable `OpenMP` or not).
 ```{python include=FALSE}
 small_naive_saxpy_df = compile_and_run(
-  4, 8, 4, omp=False, printarray=True, naive=True, saxpy=True
+  4, 8, 4, omp=False, schedule="static", chunk=0, printarray=True, naive=True, saxpy=True
 )
 ```
 ```{r echo=FALSE}
@@ -454,7 +454,7 @@ We have the frobenius norm of both techniques are `r to_float_str(py$small_naive
 However, if we set `M`, `K`, `N` to 2048. There will be a huge performance gain as in the table shown below.
 ```{python include=FALSE}
 big_naive_saxpy_df = compile_and_run(
-  2048, 2048, 2048, omp=False, naive=True, saxpy=True
+  2048, 2048, 2048, omp=False, schedule="static", chunk=0, naive=True, saxpy=True
 )
 ```
 ```{r echo=FALSE}
@@ -478,7 +478,7 @@ For parallelism, we add a directive `#pragma omp parallel for schedule(runtime) 
 
 ```{python include=FALSE}
 big_omp_naive_saxpy_df = compile_and_run(
-  2048, 2048, 2048, omp=True, naive=True, saxpy=True
+  2048, 2048, 2048, omp=True, schedule="static", chunk=0, naive=True, saxpy=True
 )
 ```
 ```{r echo=FALSE}
@@ -518,10 +518,10 @@ for (k = 0; k < K; k += BLOCK) {
 ```
 ```{python include=FALSE}
 blocking_df = compile_and_run(
-  2048, 2048, 2048, 256, omp=False, naive=True, saxpy=True, tiled=True,
+  2048, 2048, 2048, 256, omp=False, schedule="static", chunk=0, naive=True, saxpy=True, tiled=True,
 )
 blocking_omp_df = compile_and_run(
-  2048, 2048, 2048, 256, omp=True, naive=True, saxpy=True, tiled=True,
+  2048, 2048, 2048, 256, omp=True, schedule="static", chunk=0, naive=True, saxpy=True, tiled=True,
 )
 ```
 
@@ -545,7 +545,7 @@ rbind(py$blocking_df, py$blocking_omp_df) %>%
 One last technique that is used in our code is calling the `cblas_dgemm` function which use the optimized BLAS implementation. This function is the fastest method even if other methods are *"cheated"* (by using `OpenMP`)  as their implementation is optimized based on many factors: algorithms, software and hardware.
 ```{python include=FALSE}
 all_df = compile_and_run(
-  2048, 2048, 2048, 256, omp=True, naive=True, saxpy=True, tiled=True, blas=True,
+  2048, 2048, 2048, 256, omp=True, schedule="static", chunk=0, naive=True, saxpy=True, tiled=True, blas=True,
 )
 ```
 ```{r echo=FALSE}
@@ -591,6 +591,8 @@ else:
                     block,
                     True,
                     1,
+                    schedule="static", 
+                    chunk=0, 
                     naive=True,
                     saxpy=True,
                     tiled=True,
@@ -605,6 +607,8 @@ else:
                     block,
                     False,
                     1,
+                    schedule="static", 
+                    chunk=0, 
                     naive=True,
                     saxpy=True,
                     tiled=True,
