@@ -1,0 +1,958 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+  12pt,
+  xcolor = usenames,dvipsnames]{article}
+\usepackage{amsmath,amssymb}
+\usepackage{lmodern}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math}
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\IfFileExists{bookmark.sty}{\usepackage{bookmark}}{\usepackage{hyperref}}
+\hypersetup{
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+\urlstyle{same} % disable monospaced font for URLs
+\usepackage[margin=1in]{geometry}
+\usepackage{listings}
+\newcommand{\passthrough}[1]{#1}
+\lstset{defaultdialect=[5.3]Lua}
+\lstset{defaultdialect=[x86masm]Assembler}
+\usepackage{longtable,booktabs,array}
+\usepackage{calc} % for calculating minipage widths
+% Correct order of tables after \paragraph or \subparagraph
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
+\makeatother
+% Allow footnotes in longtable head/foot
+\IfFileExists{footnotehyper.sty}{\usepackage{footnotehyper}}{\usepackage{footnote}}
+\makesavenoteenv{longtable}
+\usepackage{graphicx}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{5}
+\usepackage{setspace}
+\usepackage{float}
+\usepackage{fontspec}
+\usepackage{subfig}
+\setmonofont{JetBrains Mono}[Contextuals=Alternate]
+\floatplacement{figure}{H}
+\lstset{
+  language=C,
+  basicstyle={\linespread{0.8}\ttfamily},
+  stepnumber=1,
+  numbersep=5pt,
+  backgroundcolor=\color{cyan!5},
+  showspaces=false,
+  showstringspaces=false,
+  showtabs=false,
+  frame=single,
+  rulecolor=\color{black},
+  tabsize=2,
+  captionpos=b,
+  breaklines=true,
+  breakatwhitespace=false,
+  keywordstyle=\color{RoyalBlue},
+  commentstyle=\color{Green},
+  stringstyle=\color{Orange},
+}
+\makeatletter
+\renewcommand\paragraph{\@startsection{paragraph}{4}{\z@}%
+  {-2.5ex\@plus -1ex \@minus -.25ex}%
+  {1.25ex \@plus .25ex}%
+  {\normalfont\normalsize\bfseries}}
+\makeatother
+\setcounter{secnumdepth}{4}
+\hypersetup{
+  colorlinks = true,
+}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{wrapfig}
+\usepackage{float}
+\usepackage{colortbl}
+\usepackage{pdflscape}
+\usepackage{tabu}
+\usepackage{threeparttable}
+\usepackage{threeparttablex}
+\usepackage[normalem]{ulem}
+\usepackage{makecell}
+\usepackage{xcolor}
+\ifLuaTeX
+  \usepackage{selnolig}  % disable illegal ligatures
+\fi
+
+\author{}
+\date{\vspace{-2.5em}}
+
+\begin{document}
+
+\onehalfspacing
+
+\pagenumbering{gobble}
+
+%\begin{titlepage}
+\vspace*{\fill}
+\begin{center}
+  \LARGE{\textbf{Optimization and OpenMP parallelization of the dense matrix-matrix product computation}}\\
+  \Large{\textbf{HPC 4GMM 2021/2022}}\\
+  \vspace*{1\baselineskip}
+  \Large{\textbf{Members}}\\
+  PHAM Tuan Kiet\\
+  VO Van Nghia\\
+  \vfill % equivalent to \vspace{\fill}
+  \vspace*{\fill}
+  \Large{\textbf{Date}}\\
+  12 Dec, 2021
+\end{center}
+% \end{titlepage}
+
+\newpage
+
+\newpage
+\pagenumbering{roman}
+\tableofcontents
+\addcontentsline{toc}{section}{\contentsname}
+
+\newpage
+\pagenumbering{arabic}
+
+\hypertarget{techniques}{%
+\section{Techniques}\label{techniques}}
+
+\hypertarget{naive-dot}{%
+\subsection{Naive dot}\label{naive-dot}}
+
+We first mention here the original \passthrough{\lstinline!naive\_dot!} function. This function serves as an anchor (or base case) for performance comparision as well as for making sure we have the right result when using other techniques.
+
+\begin{lstlisting}[language=C]
+for (i = 0; i < M; i++)
+  for (j = 0; j < N; j++)
+    for (k = 0; k < K; k++) C[i + ldc * j] += A[i + lda * k] * B[k + ldb * j];
+\end{lstlisting}
+
+Below is the output of \passthrough{\lstinline!naive\_dot!} for \passthrough{\lstinline!M = 1!}, \passthrough{\lstinline!K = 2!}, \passthrough{\lstinline!N = 2!}:
+
+\begin{lstlisting}
+## 
+## Parallel execution with a maximum of 4 threads callable
+## 
+## Scheduling static with chunk = 0
+## 
+## ( 1.00  1.50 )
+## 
+## ( 1.00  1.50 )
+## ( 1.50  2.00 )
+## 
+## Frobenius Norm   = 5.550901
+## Total time naive = 0.000000
+## Gflops           = inf
+## 
+## ( 3.25  4.50 )
+\end{lstlisting}
+
+As
+\[
+\begin{pmatrix}
+1 && 1,5
+\end{pmatrix}\begin{pmatrix}
+1 && 1,5\\
+1,5 && 2
+\end{pmatrix}=\begin{pmatrix}
+3,25 && 4,5
+\end{pmatrix}
+\]
+The result of this function is correct. We could move on to the next technique.
+
+\hypertarget{spatial-locality}{%
+\subsection{Spatial locality}\label{spatial-locality}}
+
+Spatial locality refers to the following scenario: if a particular storage location is referenced at a particular time, then it is likely that nearby memory locations will be referenced in the near future. In order to take advantages of this property, we notice that:
+
+\begin{itemize}
+\tightlist
+\item
+  In memory, \passthrough{\lstinline!A!}, \passthrough{\lstinline!B!}, \passthrough{\lstinline!C!} are stored in contiguous memory block.
+\item
+  When using the index order \passthrough{\lstinline!i!}, \passthrough{\lstinline!j!}, \passthrough{\lstinline!k!}, we access \passthrough{\lstinline!B!} consecutively (as we access \passthrough{\lstinline!B!} by \passthrough{\lstinline!B[k + ldb * j]!}), but not \passthrough{\lstinline!A!} and \passthrough{\lstinline!C!}.
+\item
+  Data from \passthrough{\lstinline!A!}, \passthrough{\lstinline!B!}, \passthrough{\lstinline!C!} are loaded in a memory block consisting of severals consecutive elements to cache. Thus, we could make use of spatial locality when reading data continously.
+\end{itemize}
+
+From 3 points above, we decide to switch the index order to \passthrough{\lstinline!k!}, \passthrough{\lstinline!j!}, \passthrough{\lstinline!i!}. Now we see that both reading and writing operations on \passthrough{\lstinline!C!} are in cache, this brings us a critical gain in performance. In addition, reading operations on \passthrough{\lstinline!A!} are in cache too but those on \passthrough{\lstinline!B!} are not.
+
+\begin{lstlisting}[language=C]
+for (k = 0; k < K; k++)
+  for (j = 0; j < N; j++)
+    for (i = 0; i < M; i++) C[i + ldc * j] += A[i + lda * k] * B[k + ldb * j];
+\end{lstlisting}
+
+For comparision, we have a table below with small \passthrough{\lstinline!M!}, \passthrough{\lstinline!K!}, \passthrough{\lstinline!N!} (\passthrough{\lstinline!OMP!} indicates if we enable \passthrough{\lstinline!OpenMP!} or not).
+
+\begin{table}[!h]
+\centering
+\resizebox{\linewidth}{!}{
+\begin{tabular}[t]{lrrrrrrl}
+\toprule
+Technique & Time & Norm & Gflops & M & K & N & OMP\\
+\midrule
+naive & 0 & 3.461352 & Inf & 4 & 8 & 4 & F\\
+saxpy & 0 & 3.461352 & Inf & 4 & 8 & 4 & F\\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+We have the frobenius norm of both techniques are 3,461352, which indicate we have the right computation result. In addition, calculating time is already significantly small (\(\approx\) 0 second in both methods) and the difference between these two can therefore be ommited.
+
+However, if we set \passthrough{\lstinline!M!}, \passthrough{\lstinline!K!}, \passthrough{\lstinline!N!} to 2048. There will be a huge performance gain as in the table shown below.
+
+\begin{table}[!h]
+\centering
+\resizebox{\linewidth}{!}{
+\begin{tabular}[t]{lrrrrrrl}
+\toprule
+Technique & Time & Norm & Gflops & M & K & N & OMP\\
+\midrule
+naive & 62.267724 & 2.323362 & 0.275903 & 2048 & 2048 & 2048 & F\\
+saxpy & 5.800958 & 2.323362 & 2.961557 & 2048 & 2048 & 2048 & F\\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+Here, the \passthrough{\lstinline!naive\_dot!} function is approximately 11 times slower than the \passthrough{\lstinline!saxpy\_dot!} function.
+
+\hypertarget{openmp-parallelization}{%
+\subsection{OpenMP parallelization}\label{openmp-parallelization}}
+
+For parallelism, we add a directive \passthrough{\lstinline!\#pragma omp parallel for schedule(runtime) default(shared)!} and \passthrough{\lstinline!private(i, j, k)!} depending on which variables we want to make private. A special clause \passthrough{\lstinline!reduction(+ : norm)!} is added to \passthrough{\lstinline!norm!} function as we want to sum all the \passthrough{\lstinline!norm!} from each thread to only one variable. A link to github with full source code will be provided at the end of the report. For performance comparision, we will show only one case here. More detailed study will be presented in the next sections.
+
+\begin{table}[!h]
+\centering
+\resizebox{\linewidth}{!}{
+\begin{tabular}[t]{lrrrrrrrlrlr}
+\toprule
+Technique & Time & Norm & Gflops & M & K & N & Block & OMP & Threads & Schedule & Chunk\\
+\midrule
+naive & 62.267724 & 2.323362 & 0.275903 & 2048 & 2048 & 2048 & 4 & F & 4 & static & 0\\
+saxpy & 5.800958 & 2.323362 & 2.961557 & 2048 & 2048 & 2048 & 4 & F & 4 & static & 0\\
+naive & 33.076697 & 2.323362 & 0.519395 & 2048 & 2048 & 2048 & 4 & T & 4 & static & 0\\
+saxpy & 4.116676 & 2.323245 & 4.173238 & 2048 & 2048 & 2048 & 4 & T & 4 & static & 0\\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\hypertarget{cache-blocking}{%
+\subsection{Cache blocking}\label{cache-blocking}}
+
+The main idea of the cache blocking technique (or tiled) is breaking the whole matrices into smaller sub-matrices so the data needed for one multiplication operation could fit into the cache, therefore leads to a much faster calculation. Furthermore, if we enable \passthrough{\lstinline!OpenMP!}, the computation would be even faster as each sub-matrice is processed by a separate thread. However, if we set \passthrough{\lstinline!BLOCK!} size too small, the benefit of dividing matrix is overshadowed by the additional loops and operations. Meanwhile, a too large \passthrough{\lstinline!BLOCK!} size leads to an overfitting (data for one operation can not be fitted into the cache), and therefore a slower operation. The principal source code is shown below:
+
+\begin{lstlisting}[language=C]
+for (k = 0; k < K; k += BLOCK) {
+  for (j = 0; j < N; j += BLOCK) {
+    for (i = 0; i < M; i += BLOCK) {
+      int kmin = fmin(K - k, BLOCK);
+      for (kk = 0; kk < kmin; kk++) {
+        int jmin = fmin(N - j, BLOCK);
+        for (jj = 0; jj < jmin; jj++) {
+          int imin = fmin(M - i, BLOCK);
+          for (ii = 0; ii < imin; ii++) {
+            C[(ii + i) + ldc * (jj + j)] +=
+                A[(ii + i) + lda * (kk + k)] * B[(kk + k) + ldb * (jj + j)];
+          }
+        }
+      }
+    }
+  }
+}
+\end{lstlisting}
+
+In addition, we see in the table below that we have 1,71 times faster with the non \passthrough{\lstinline!OpenMP!} version and 1,79 times with \passthrough{\lstinline!OpenMP!}.
+
+\begin{table}[!h]
+\centering
+\resizebox{\linewidth}{!}{
+\begin{tabular}[t]{lrrrrrrrlrlr}
+\toprule
+Technique & Time & Norm & Gflops & M & K & N & Block & OMP & Threads & Schedule & Chunk\\
+\midrule
+naive & 62.267724 & 2.323362 & 0.275903 & 2048 & 2048 & 2048 & 256 & F & 4 & static & 0\\
+saxpy & 5.800958 & 2.323362 & 2.961557 & 2048 & 2048 & 2048 & 256 & F & 4 & static & 0\\
+tiled & 3.387300 & 2.323362 & 5.071848 & 2048 & 2048 & 2048 & 256 & F & 4 & static & 0\\
+\addlinespace
+naive & 33.076697 & 2.323362 & 0.519395 & 2048 & 2048 & 2048 & 256 & T & 4 & static & 0\\
+saxpy & 4.116676 & 2.323245 & 4.173238 & 2048 & 2048 & 2048 & 256 & T & 4 & static & 0\\
+tiled & 2.298825 & 2.321977 & 7.473326 & 2048 & 2048 & 2048 & 256 & T & 4 & static & 0\\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\hypertarget{blas}{%
+\subsection{BLAS}\label{blas}}
+
+One last technique that is used in our code is calling the \passthrough{\lstinline!cblas\_dgemm!} function which use the optimized BLAS implementation. This function is the fastest method even if other methods are \emph{``cheated''} (by using \passthrough{\lstinline!OpenMP!}) as their implementation is optimized based on many factors: algorithms, software and hardware.
+
+\begin{table}[!h]
+\centering
+\resizebox{\linewidth}{!}{
+\begin{tabular}[t]{lrrrrrrrlrlr}
+\toprule
+Technique & Time & Norm & Gflops & M & K & N & Block & OMP & Threads & Schedule & Chunk\\
+\midrule
+naive & 33.076697 & 2.323362 & 0.519395 & 2048 & 2048 & 2048 & 256 & T & 4 & static & 0\\
+saxpy & 4.116676 & 2.323245 & 4.173238 & 2048 & 2048 & 2048 & 256 & T & 4 & static & 0\\
+tiled & 2.298825 & 2.321977 & 7.473326 & 2048 & 2048 & 2048 & 256 & T & 4 & static & 0\\
+blas & 0.375638 & 2.323362 & 45.735173 & 2048 & 2048 & 2048 & 256 & T & 4 & static & 0\\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\hypertarget{sequential}{%
+\section{Sequential}\label{sequential}}
+
+In this section, we fix \passthrough{\lstinline!OMP\_NUM\_TREADS=1!} for each run and vary matrix size and blocking size (We don't care about schedule and chunk size because there is only 1 thread).
+
+\hypertarget{m-k-n}{%
+\subsection{M = K = N}\label{m-k-n}}
+
+First, we consider the case where M and K and N are all equal and equal to a \(2^s\). The blocking size is also supposed to be in a form of \(2^t\). In addition, as \passthrough{\lstinline!OMP\_NUM\_TREADS=1!} is essentially the same logic as non \passthrough{\lstinline!OpenMP!} version, we will include a non \passthrough{\lstinline!OpenMP!} result for studying how the overhead time of \passthrough{\lstinline!OpenMP!} impact the overall performance.
+
+\begin{lstlisting}
+## Warning in py_to_r.pandas.core.frame.DataFrame(x): index contains duplicated
+## values: row names not set
+\end{lstlisting}
+
+\begin{table}[!h]
+\centering
+\resizebox{\linewidth}{!}{
+\begin{tabular}[t]{lrrrrrrrlrlr}
+\toprule
+Technique & Time & Norm & Gflops & M & K & N & Block & OMP & Threads & Schedule & Chunk\\
+\midrule
+naive & 0.000002 & 4.746709 & 0.008389 & 2 & 2 & 2 & 1 & T & 1 & static & 0\\
+saxpy & 0.000001 & 4.746709 & 0.016777 & 2 & 2 & 2 & 1 & T & 1 & static & 0\\
+tiled & 0.000001 & 4.746709 & 0.016777 & 2 & 2 & 2 & 1 & T & 1 & static & 0\\
+blas & 0.000015 & 4.746709 & 0.001065 & 2 & 2 & 2 & 1 & T & 1 & static & 0\\
+naive & 0.000002 & 4.746709 & 0.008389 & 2 & 2 & 2 & 2 & T & 1 & static & 0\\
+\addlinespace
+saxpy & 0.000001 & 4.746709 & 0.016777 & 2 & 2 & 2 & 2 & T & 1 & static & 0\\
+tiled & 0.000001 & 4.746709 & 0.016777 & 2 & 2 & 2 & 2 & T & 1 & static & 0\\
+blas & 0.000015 & 4.746709 & 0.001065 & 2 & 2 & 2 & 2 & T & 1 & static & 0\\
+naive & 0.000002 & 4.746709 & 0.008389 & 2 & 2 & 2 & 4 & T & 1 & static & 0\\
+saxpy & 0.000001 & 4.746709 & 0.016777 & 2 & 2 & 2 & 4 & T & 1 & static & 0\\
+\addlinespace
+tiled & 0.000001 & 4.746709 & 0.013422 & 2 & 2 & 2 & 4 & T & 1 & static & 0\\
+blas & 0.000015 & 4.746709 & 0.001065 & 2 & 2 & 2 & 4 & T & 1 & static & 0\\
+naive & 0.000002 & 4.746709 & 0.008389 & 2 & 2 & 2 & 8 & T & 1 & static & 0\\
+saxpy & 0.000001 & 4.746709 & 0.016777 & 2 & 2 & 2 & 8 & T & 1 & static & 0\\
+tiled & 0.000001 & 4.746709 & 0.016777 & 2 & 2 & 2 & 8 & T & 1 & static & 0\\
+\addlinespace
+blas & 0.000015 & 4.746709 & 0.001065 & 2 & 2 & 2 & 8 & T & 1 & static & 0\\
+naive & 0.000002 & 4.746709 & 0.008389 & 2 & 2 & 2 & 16 & T & 1 & static & 0\\
+saxpy & 0.000001 & 4.746709 & 0.016777 & 2 & 2 & 2 & 16 & T & 1 & static & 0\\
+tiled & 0.000001 & 4.746709 & 0.016777 & 2 & 2 & 2 & 16 & T & 1 & static & 0\\
+blas & 0.000015 & 4.746709 & 0.001065 & 2 & 2 & 2 & 16 & T & 1 & static & 0\\
+\addlinespace
+naive & 0.000002 & 4.746709 & 0.008389 & 2 & 2 & 2 & 32 & T & 1 & static & 0\\
+saxpy & 0.000001 & 4.746709 & 0.016777 & 2 & 2 & 2 & 32 & T & 1 & static & 0\\
+tiled & 0.000001 & 4.746709 & 0.016777 & 2 & 2 & 2 & 32 & T & 1 & static & 0\\
+blas & 0.000015 & 4.746709 & 0.001065 & 2 & 2 & 2 & 32 & T & 1 & static & 0\\
+naive & 0.000002 & 4.746709 & 0.008389 & 2 & 2 & 2 & 64 & T & 1 & static & 0\\
+\addlinespace
+saxpy & 0.000001 & 4.746709 & 0.016777 & 2 & 2 & 2 & 64 & T & 1 & static & 0\\
+tiled & 0.000001 & 4.746709 & 0.016777 & 2 & 2 & 2 & 64 & T & 1 & static & 0\\
+blas & 0.000015 & 4.746709 & 0.001065 & 2 & 2 & 2 & 64 & T & 1 & static & 0\\
+naive & 0.000002 & 4.746709 & 0.008389 & 2 & 2 & 2 & 128 & T & 1 & static & 0\\
+saxpy & 0.000001 & 4.746709 & 0.016777 & 2 & 2 & 2 & 128 & T & 1 & static & 0\\
+\addlinespace
+tiled & 0.000001 & 4.746709 & 0.016777 & 2 & 2 & 2 & 128 & T & 1 & static & 0\\
+blas & 0.000015 & 4.746709 & 0.001065 & 2 & 2 & 2 & 128 & T & 1 & static & 0\\
+naive & 0.000002 & 4.746709 & 0.008389 & 2 & 2 & 2 & 256 & T & 1 & static & 0\\
+saxpy & 0.000001 & 4.746709 & 0.016777 & 2 & 2 & 2 & 256 & T & 1 & static & 0\\
+tiled & 0.000001 & 4.746709 & 0.016777 & 2 & 2 & 2 & 256 & T & 1 & static & 0\\
+\addlinespace
+blas & 0.000015 & 4.746709 & 0.001065 & 2 & 2 & 2 & 256 & T & 1 & static & 0\\
+naive & 0.000002 & 4.746709 & 0.008389 & 2 & 2 & 2 & 512 & T & 1 & static & 0\\
+saxpy & 0.000001 & 4.746709 & 0.016777 & 2 & 2 & 2 & 512 & T & 1 & static & 0\\
+tiled & 0.000002 & 4.746709 & 0.007457 & 2 & 2 & 2 & 512 & T & 1 & static & 0\\
+blas & 0.000015 & 4.746709 & 0.001065 & 2 & 2 & 2 & 512 & T & 1 & static & 0\\
+\addlinespace
+naive & 0.000002 & 4.746709 & 0.008389 & 2 & 2 & 2 & 1024 & T & 1 & static & 0\\
+saxpy & 0.000001 & 4.746709 & 0.016777 & 2 & 2 & 2 & 1024 & T & 1 & static & 0\\
+tiled & 0.000001 & 4.746709 & 0.016777 & 2 & 2 & 2 & 1024 & T & 1 & static & 0\\
+blas & 0.000015 & 4.746709 & 0.001065 & 2 & 2 & 2 & 1024 & T & 1 & static & 0\\
+naive & 0.000003 & 3.430390 & 0.044739 & 4 & 4 & 4 & 1 & T & 1 & static & 0\\
+\addlinespace
+saxpy & 0.000001 & 3.430390 & 0.134218 & 4 & 4 & 4 & 1 & T & 1 & static & 0\\
+tiled & 0.000001 & 3.430390 & 0.107374 & 4 & 4 & 4 & 1 & T & 1 & static & 0\\
+blas & 0.000016 & 3.430390 & 0.008013 & 4 & 4 & 4 & 1 & T & 1 & static & 0\\
+naive & 0.000003 & 3.430390 & 0.044739 & 4 & 4 & 4 & 2 & T & 1 & static & 0\\
+saxpy & 0.000001 & 3.430390 & 0.134218 & 4 & 4 & 4 & 2 & T & 1 & static & 0\\
+\addlinespace
+tiled & 0.000002 & 3.430390 & 0.067109 & 4 & 4 & 4 & 2 & T & 1 & static & 0\\
+blas & 0.000016 & 3.430390 & 0.008013 & 4 & 4 & 4 & 2 & T & 1 & static & 0\\
+naive & 0.000003 & 3.430390 & 0.044739 & 4 & 4 & 4 & 4 & T & 1 & static & 0\\
+saxpy & 0.000001 & 3.430390 & 0.134218 & 4 & 4 & 4 & 4 & T & 1 & static & 0\\
+tiled & 0.000001 & 3.430390 & 0.134218 & 4 & 4 & 4 & 4 & T & 1 & static & 0\\
+\addlinespace
+blas & 0.000016 & 3.430390 & 0.008013 & 4 & 4 & 4 & 4 & T & 1 & static & 0\\
+naive & 0.000003 & 3.430390 & 0.044739 & 4 & 4 & 4 & 8 & T & 1 & static & 0\\
+saxpy & 0.000001 & 3.430390 & 0.134218 & 4 & 4 & 4 & 8 & T & 1 & static & 0\\
+tiled & 0.000002 & 3.430390 & 0.067109 & 4 & 4 & 4 & 8 & T & 1 & static & 0\\
+blas & 0.000016 & 3.430390 & 0.008013 & 4 & 4 & 4 & 8 & T & 1 & static & 0\\
+\addlinespace
+naive & 0.000003 & 3.430390 & 0.044739 & 4 & 4 & 4 & 16 & T & 1 & static & 0\\
+saxpy & 0.000001 & 3.430390 & 0.134218 & 4 & 4 & 4 & 16 & T & 1 & static & 0\\
+tiled & 0.000001 & 3.430390 & 0.134218 & 4 & 4 & 4 & 16 & T & 1 & static & 0\\
+blas & 0.000016 & 3.430390 & 0.008013 & 4 & 4 & 4 & 16 & T & 1 & static & 0\\
+naive & 0.000003 & 3.430390 & 0.044739 & 4 & 4 & 4 & 32 & T & 1 & static & 0\\
+\addlinespace
+saxpy & 0.000001 & 3.430390 & 0.134218 & 4 & 4 & 4 & 32 & T & 1 & static & 0\\
+tiled & 0.000002 & 3.430390 & 0.059652 & 4 & 4 & 4 & 32 & T & 1 & static & 0\\
+blas & 0.000016 & 3.430390 & 0.008013 & 4 & 4 & 4 & 32 & T & 1 & static & 0\\
+naive & 0.000003 & 3.430390 & 0.044739 & 4 & 4 & 4 & 64 & T & 1 & static & 0\\
+saxpy & 0.000001 & 3.430390 & 0.134218 & 4 & 4 & 4 & 64 & T & 1 & static & 0\\
+\addlinespace
+tiled & 0.000001 & 3.430390 & 0.134218 & 4 & 4 & 4 & 64 & T & 1 & static & 0\\
+blas & 0.000016 & 3.430390 & 0.008013 & 4 & 4 & 4 & 64 & T & 1 & static & 0\\
+naive & 0.000003 & 3.430390 & 0.044739 & 4 & 4 & 4 & 128 & T & 1 & static & 0\\
+saxpy & 0.000001 & 3.430390 & 0.134218 & 4 & 4 & 4 & 128 & T & 1 & static & 0\\
+tiled & 0.000002 & 3.430390 & 0.059652 & 4 & 4 & 4 & 128 & T & 1 & static & 0\\
+\addlinespace
+blas & 0.000016 & 3.430390 & 0.008013 & 4 & 4 & 4 & 128 & T & 1 & static & 0\\
+naive & 0.000003 & 3.430390 & 0.044739 & 4 & 4 & 4 & 256 & T & 1 & static & 0\\
+saxpy & 0.000001 & 3.430390 & 0.134218 & 4 & 4 & 4 & 256 & T & 1 & static & 0\\
+tiled & 0.000002 & 3.430390 & 0.059652 & 4 & 4 & 4 & 256 & T & 1 & static & 0\\
+blas & 0.000016 & 3.430390 & 0.008013 & 4 & 4 & 4 & 256 & T & 1 & static & 0\\
+\addlinespace
+naive & 0.000003 & 3.430390 & 0.044739 & 4 & 4 & 4 & 512 & T & 1 & static & 0\\
+saxpy & 0.000001 & 3.430390 & 0.134218 & 4 & 4 & 4 & 512 & T & 1 & static & 0\\
+tiled & 0.000001 & 3.430390 & 0.107374 & 4 & 4 & 4 & 512 & T & 1 & static & 0\\
+blas & 0.000016 & 3.430390 & 0.008013 & 4 & 4 & 4 & 512 & T & 1 & static & 0\\
+naive & 0.000003 & 3.430390 & 0.044739 & 4 & 4 & 4 & 1024 & T & 1 & static & 0\\
+\addlinespace
+saxpy & 0.000001 & 3.430390 & 0.134218 & 4 & 4 & 4 & 1024 & T & 1 & static & 0\\
+tiled & 0.000002 & 3.430390 & 0.059652 & 4 & 4 & 4 & 1024 & T & 1 & static & 0\\
+blas & 0.000016 & 3.430390 & 0.008013 & 4 & 4 & 4 & 1024 & T & 1 & static & 0\\
+naive & 0.000004 & 2.849946 & 0.252645 & 8 & 8 & 8 & 1 & T & 1 & static & 0\\
+saxpy & 0.000002 & 2.849946 & 0.477219 & 8 & 8 & 8 & 1 & T & 1 & static & 0\\
+\addlinespace
+tiled & 0.000008 & 2.849946 & 0.126323 & 8 & 8 & 8 & 1 & T & 1 & static & 0\\
+blas & 0.000020 & 2.849946 & 0.051131 & 8 & 8 & 8 & 1 & T & 1 & static & 0\\
+naive & 0.000004 & 2.849946 & 0.252645 & 8 & 8 & 8 & 2 & T & 1 & static & 0\\
+saxpy & 0.000002 & 2.849946 & 0.477219 & 8 & 8 & 8 & 2 & T & 1 & static & 0\\
+tiled & 0.000002 & 2.849946 & 0.536871 & 8 & 8 & 8 & 2 & T & 1 & static & 0\\
+\addlinespace
+blas & 0.000020 & 2.849946 & 0.051131 & 8 & 8 & 8 & 2 & T & 1 & static & 0\\
+naive & 0.000004 & 2.849946 & 0.252645 & 8 & 8 & 8 & 4 & T & 1 & static & 0\\
+saxpy & 0.000002 & 2.849946 & 0.477219 & 8 & 8 & 8 & 4 & T & 1 & static & 0\\
+tiled & 0.000003 & 2.849946 & 0.357914 & 8 & 8 & 8 & 4 & T & 1 & static & 0\\
+blas & 0.000020 & 2.849946 & 0.051131 & 8 & 8 & 8 & 4 & T & 1 & static & 0\\
+\addlinespace
+naive & 0.000004 & 2.849946 & 0.252645 & 8 & 8 & 8 & 8 & T & 1 & static & 0\\
+saxpy & 0.000002 & 2.849946 & 0.477219 & 8 & 8 & 8 & 8 & T & 1 & static & 0\\
+tiled & 0.000001 & 2.849946 & 1.073742 & 8 & 8 & 8 & 8 & T & 1 & static & 0\\
+blas & 0.000020 & 2.849946 & 0.051131 & 8 & 8 & 8 & 8 & T & 1 & static & 0\\
+naive & 0.000004 & 2.849946 & 0.252645 & 8 & 8 & 8 & 16 & T & 1 & static & 0\\
+\addlinespace
+saxpy & 0.000002 & 2.849946 & 0.477219 & 8 & 8 & 8 & 16 & T & 1 & static & 0\\
+tiled & 0.000002 & 2.849946 & 0.536871 & 8 & 8 & 8 & 16 & T & 1 & static & 0\\
+blas & 0.000020 & 2.849946 & 0.051131 & 8 & 8 & 8 & 16 & T & 1 & static & 0\\
+naive & 0.000004 & 2.849946 & 0.252645 & 8 & 8 & 8 & 32 & T & 1 & static & 0\\
+saxpy & 0.000002 & 2.849946 & 0.477219 & 8 & 8 & 8 & 32 & T & 1 & static & 0\\
+\addlinespace
+tiled & 0.000001 & 2.849946 & 1.073742 & 8 & 8 & 8 & 32 & T & 1 & static & 0\\
+blas & 0.000020 & 2.849946 & 0.051131 & 8 & 8 & 8 & 32 & T & 1 & static & 0\\
+naive & 0.000004 & 2.849946 & 0.252645 & 8 & 8 & 8 & 64 & T & 1 & static & 0\\
+saxpy & 0.000002 & 2.849946 & 0.477219 & 8 & 8 & 8 & 64 & T & 1 & static & 0\\
+tiled & 0.000002 & 2.849946 & 0.536871 & 8 & 8 & 8 & 64 & T & 1 & static & 0\\
+\addlinespace
+blas & 0.000020 & 2.849946 & 0.051131 & 8 & 8 & 8 & 64 & T & 1 & static & 0\\
+naive & 0.000004 & 2.849946 & 0.252645 & 8 & 8 & 8 & 128 & T & 1 & static & 0\\
+saxpy & 0.000002 & 2.849946 & 0.477219 & 8 & 8 & 8 & 128 & T & 1 & static & 0\\
+tiled & 0.000002 & 2.849946 & 0.477219 & 8 & 8 & 8 & 128 & T & 1 & static & 0\\
+blas & 0.000020 & 2.849946 & 0.051131 & 8 & 8 & 8 & 128 & T & 1 & static & 0\\
+\addlinespace
+naive & 0.000004 & 2.849946 & 0.252645 & 8 & 8 & 8 & 256 & T & 1 & static & 0\\
+saxpy & 0.000002 & 2.849946 & 0.477219 & 8 & 8 & 8 & 256 & T & 1 & static & 0\\
+tiled & 0.000002 & 2.849946 & 0.477219 & 8 & 8 & 8 & 256 & T & 1 & static & 0\\
+blas & 0.000020 & 2.849946 & 0.051131 & 8 & 8 & 8 & 256 & T & 1 & static & 0\\
+naive & 0.000004 & 2.849946 & 0.252645 & 8 & 8 & 8 & 512 & T & 1 & static & 0\\
+\addlinespace
+saxpy & 0.000002 & 2.849946 & 0.477219 & 8 & 8 & 8 & 512 & T & 1 & static & 0\\
+tiled & 0.000002 & 2.849946 & 0.536871 & 8 & 8 & 8 & 512 & T & 1 & static & 0\\
+blas & 0.000020 & 2.849946 & 0.051131 & 8 & 8 & 8 & 512 & T & 1 & static & 0\\
+naive & 0.000004 & 2.849946 & 0.252645 & 8 & 8 & 8 & 1024 & T & 1 & static & 0\\
+saxpy & 0.000002 & 2.849946 & 0.477219 & 8 & 8 & 8 & 1024 & T & 1 & static & 0\\
+\addlinespace
+tiled & 0.000002 & 2.849946 & 0.536871 & 8 & 8 & 8 & 1024 & T & 1 & static & 0\\
+blas & 0.000020 & 2.849946 & 0.051131 & 8 & 8 & 8 & 1024 & T & 1 & static & 0\\
+naive & 0.000008 & 2.579180 & 1.010581 & 16 & 16 & 16 & 1 & T & 1 & static & 0\\
+saxpy & 0.000005 & 2.579180 & 1.636178 & 16 & 16 & 16 & 1 & T & 1 & static & 0\\
+tiled & 0.000052 & 2.579180 & 0.157613 & 16 & 16 & 16 & 1 & T & 1 & static & 0\\
+\addlinespace
+blas & 0.008241 & 2.579180 & 0.000994 & 16 & 16 & 16 & 1 & T & 1 & static & 0\\
+naive & 0.000008 & 2.579180 & 1.010581 & 16 & 16 & 16 & 2 & T & 1 & static & 0\\
+saxpy & 0.000005 & 2.579180 & 1.636178 & 16 & 16 & 16 & 2 & T & 1 & static & 0\\
+tiled & 0.000014 & 2.579180 & 0.582368 & 16 & 16 & 16 & 2 & T & 1 & static & 0\\
+blas & 0.008241 & 2.579180 & 0.000994 & 16 & 16 & 16 & 2 & T & 1 & static & 0\\
+\addlinespace
+naive & 0.000008 & 2.579180 & 1.010581 & 16 & 16 & 16 & 4 & T & 1 & static & 0\\
+saxpy & 0.000005 & 2.579180 & 1.636178 & 16 & 16 & 16 & 4 & T & 1 & static & 0\\
+tiled & 0.000006 & 2.579180 & 1.374390 & 16 & 16 & 16 & 4 & T & 1 & static & 0\\
+blas & 0.008241 & 2.579180 & 0.000994 & 16 & 16 & 16 & 4 & T & 1 & static & 0\\
+naive & 0.000008 & 2.579180 & 1.010581 & 16 & 16 & 16 & 8 & T & 1 & static & 0\\
+\addlinespace
+saxpy & 0.000005 & 2.579180 & 1.636178 & 16 & 16 & 16 & 8 & T & 1 & static & 0\\
+tiled & 0.000005 & 2.579180 & 1.636178 & 16 & 16 & 16 & 8 & T & 1 & static & 0\\
+blas & 0.008241 & 2.579180 & 0.000994 & 16 & 16 & 16 & 8 & T & 1 & static & 0\\
+naive & 0.000008 & 2.579180 & 1.010581 & 16 & 16 & 16 & 16 & T & 1 & static & 0\\
+saxpy & 0.000005 & 2.579180 & 1.636178 & 16 & 16 & 16 & 16 & T & 1 & static & 0\\
+\addlinespace
+tiled & 0.000004 & 2.579180 & 2.021161 & 16 & 16 & 16 & 16 & T & 1 & static & 0\\
+blas & 0.008241 & 2.579180 & 0.000994 & 16 & 16 & 16 & 16 & T & 1 & static & 0\\
+naive & 0.000008 & 2.579180 & 1.010581 & 16 & 16 & 16 & 32 & T & 1 & static & 0\\
+saxpy & 0.000005 & 2.579180 & 1.636178 & 16 & 16 & 16 & 32 & T & 1 & static & 0\\
+tiled & 0.000007 & 2.579180 & 1.184819 & 16 & 16 & 16 & 32 & T & 1 & static & 0\\
+\addlinespace
+blas & 0.008241 & 2.579180 & 0.000994 & 16 & 16 & 16 & 32 & T & 1 & static & 0\\
+naive & 0.000008 & 2.579180 & 1.010581 & 16 & 16 & 16 & 64 & T & 1 & static & 0\\
+saxpy & 0.000005 & 2.579180 & 1.636178 & 16 & 16 & 16 & 64 & T & 1 & static & 0\\
+tiled & 0.000004 & 2.579180 & 2.021161 & 16 & 16 & 16 & 64 & T & 1 & static & 0\\
+blas & 0.008241 & 2.579180 & 0.000994 & 16 & 16 & 16 & 64 & T & 1 & static & 0\\
+\addlinespace
+naive & 0.000008 & 2.579180 & 1.010581 & 16 & 16 & 16 & 128 & T & 1 & static & 0\\
+saxpy & 0.000005 & 2.579180 & 1.636178 & 16 & 16 & 16 & 128 & T & 1 & static & 0\\
+tiled & 0.000005 & 2.579180 & 1.636178 & 16 & 16 & 16 & 128 & T & 1 & static & 0\\
+blas & 0.008241 & 2.579180 & 0.000994 & 16 & 16 & 16 & 128 & T & 1 & static & 0\\
+naive & 0.000008 & 2.579180 & 1.010581 & 16 & 16 & 16 & 256 & T & 1 & static & 0\\
+\addlinespace
+saxpy & 0.000005 & 2.579180 & 1.636178 & 16 & 16 & 16 & 256 & T & 1 & static & 0\\
+tiled & 0.000004 & 2.579180 & 2.147484 & 16 & 16 & 16 & 256 & T & 1 & static & 0\\
+blas & 0.008241 & 2.579180 & 0.000994 & 16 & 16 & 16 & 256 & T & 1 & static & 0\\
+naive & 0.000008 & 2.579180 & 1.010581 & 16 & 16 & 16 & 512 & T & 1 & static & 0\\
+saxpy & 0.000005 & 2.579180 & 1.636178 & 16 & 16 & 16 & 512 & T & 1 & static & 0\\
+\addlinespace
+tiled & 0.000004 & 2.579180 & 2.021161 & 16 & 16 & 16 & 512 & T & 1 & static & 0\\
+blas & 0.008241 & 2.579180 & 0.000994 & 16 & 16 & 16 & 512 & T & 1 & static & 0\\
+naive & 0.000008 & 2.579180 & 1.010581 & 16 & 16 & 16 & 1024 & T & 1 & static & 0\\
+saxpy & 0.000005 & 2.579180 & 1.636178 & 16 & 16 & 16 & 1024 & T & 1 & static & 0\\
+tiled & 0.000004 & 2.579180 & 2.021161 & 16 & 16 & 16 & 1024 & T & 1 & static & 0\\
+\addlinespace
+blas & 0.008241 & 2.579180 & 0.000994 & 16 & 16 & 16 & 1024 & T & 1 & static & 0\\
+naive & 0.000045 & 2.448665 & 1.454380 & 32 & 32 & 32 & 1 & T & 1 & static & 0\\
+saxpy & 0.000032 & 2.448665 & 2.051328 & 32 & 32 & 32 & 1 & T & 1 & static & 0\\
+tiled & 0.000430 & 2.448665 & 0.152456 & 32 & 32 & 32 & 1 & T & 1 & static & 0\\
+blas & 0.000053 & 2.448665 & 1.232636 & 32 & 32 & 32 & 1 & T & 1 & static & 0\\
+\addlinespace
+naive & 0.000045 & 2.448665 & 1.454380 & 32 & 32 & 32 & 2 & T & 1 & static & 0\\
+saxpy & 0.000032 & 2.448665 & 2.051328 & 32 & 32 & 32 & 2 & T & 1 & static & 0\\
+tiled & 0.000110 & 2.448665 & 0.594974 & 32 & 32 & 32 & 2 & T & 1 & static & 0\\
+blas & 0.000053 & 2.448665 & 1.232636 & 32 & 32 & 32 & 2 & T & 1 & static & 0\\
+naive & 0.000045 & 2.448665 & 1.454380 & 32 & 32 & 32 & 4 & T & 1 & static & 0\\
+\addlinespace
+saxpy & 0.000032 & 2.448665 & 2.051328 & 32 & 32 & 32 & 4 & T & 1 & static & 0\\
+tiled & 0.000069 & 2.448665 & 0.951135 & 32 & 32 & 32 & 4 & T & 1 & static & 0\\
+blas & 0.000053 & 2.448665 & 1.232636 & 32 & 32 & 32 & 4 & T & 1 & static & 0\\
+naive & 0.000045 & 2.448665 & 1.454380 & 32 & 32 & 32 & 8 & T & 1 & static & 0\\
+saxpy & 0.000032 & 2.448665 & 2.051328 & 32 & 32 & 32 & 8 & T & 1 & static & 0\\
+\addlinespace
+tiled & 0.000035 & 2.448665 & 1.869918 & 32 & 32 & 32 & 8 & T & 1 & static & 0\\
+blas & 0.000053 & 2.448665 & 1.232636 & 32 & 32 & 32 & 8 & T & 1 & static & 0\\
+naive & 0.000045 & 2.448665 & 1.454380 & 32 & 32 & 32 & 16 & T & 1 & static & 0\\
+saxpy & 0.000032 & 2.448665 & 2.051328 & 32 & 32 & 32 & 16 & T & 1 & static & 0\\
+tiled & 0.000029 & 2.448665 & 2.253098 & 32 & 32 & 32 & 16 & T & 1 & static & 0\\
+\addlinespace
+blas & 0.000053 & 2.448665 & 1.232636 & 32 & 32 & 32 & 16 & T & 1 & static & 0\\
+naive & 0.000045 & 2.448665 & 1.454380 & 32 & 32 & 32 & 32 & T & 1 & static & 0\\
+saxpy & 0.000032 & 2.448665 & 2.051328 & 32 & 32 & 32 & 32 & T & 1 & static & 0\\
+tiled & 0.000017 & 2.448665 & 3.817749 & 32 & 32 & 32 & 32 & T & 1 & static & 0\\
+blas & 0.000053 & 2.448665 & 1.232636 & 32 & 32 & 32 & 32 & T & 1 & static & 0\\
+\addlinespace
+naive & 0.000045 & 2.448665 & 1.454380 & 32 & 32 & 32 & 64 & T & 1 & static & 0\\
+saxpy & 0.000032 & 2.448665 & 2.051328 & 32 & 32 & 32 & 64 & T & 1 & static & 0\\
+tiled & 0.000017 & 2.448665 & 3.871520 & 32 & 32 & 32 & 64 & T & 1 & static & 0\\
+blas & 0.000053 & 2.448665 & 1.232636 & 32 & 32 & 32 & 64 & T & 1 & static & 0\\
+naive & 0.000045 & 2.448665 & 1.454380 & 32 & 32 & 32 & 128 & T & 1 & static & 0\\
+\addlinespace
+saxpy & 0.000032 & 2.448665 & 2.051328 & 32 & 32 & 32 & 128 & T & 1 & static & 0\\
+tiled & 0.000017 & 2.448665 & 3.871520 & 32 & 32 & 32 & 128 & T & 1 & static & 0\\
+blas & 0.000053 & 2.448665 & 1.232636 & 32 & 32 & 32 & 128 & T & 1 & static & 0\\
+naive & 0.000045 & 2.448665 & 1.454380 & 32 & 32 & 32 & 256 & T & 1 & static & 0\\
+saxpy & 0.000032 & 2.448665 & 2.051328 & 32 & 32 & 32 & 256 & T & 1 & static & 0\\
+\addlinespace
+tiled & 0.000019 & 2.448665 & 3.435974 & 32 & 32 & 32 & 256 & T & 1 & static & 0\\
+blas & 0.000053 & 2.448665 & 1.232636 & 32 & 32 & 32 & 256 & T & 1 & static & 0\\
+naive & 0.000045 & 2.448665 & 1.454380 & 32 & 32 & 32 & 512 & T & 1 & static & 0\\
+saxpy & 0.000032 & 2.448665 & 2.051328 & 32 & 32 & 32 & 512 & T & 1 & static & 0\\
+tiled & 0.000018 & 2.448665 & 3.665039 & 32 & 32 & 32 & 512 & T & 1 & static & 0\\
+\addlinespace
+blas & 0.000053 & 2.448665 & 1.232636 & 32 & 32 & 32 & 512 & T & 1 & static & 0\\
+naive & 0.000045 & 2.448665 & 1.454380 & 32 & 32 & 32 & 1024 & T & 1 & static & 0\\
+saxpy & 0.000032 & 2.448665 & 2.051328 & 32 & 32 & 32 & 1024 & T & 1 & static & 0\\
+tiled & 0.000018 & 2.448665 & 3.665039 & 32 & 32 & 32 & 1024 & T & 1 & static & 0\\
+blas & 0.000053 & 2.448665 & 1.232636 & 32 & 32 & 32 & 1024 & T & 1 & static & 0\\
+\addlinespace
+naive & 0.000296 & 2.384626 & 1.771977 & 64 & 64 & 64 & 1 & T & 1 & static & 0\\
+saxpy & 0.000150 & 2.384626 & 3.496062 & 64 & 64 & 64 & 1 & T & 1 & static & 0\\
+tiled & 0.001755 & 2.384626 & 0.298740 & 64 & 64 & 64 & 1 & T & 1 & static & 0\\
+blas & 0.000076 & 2.384626 & 6.893490 & 64 & 64 & 64 & 1 & T & 1 & static & 0\\
+naive & 0.000296 & 2.384626 & 1.771977 & 64 & 64 & 64 & 2 & T & 1 & static & 0\\
+\addlinespace
+saxpy & 0.000150 & 2.384626 & 3.496062 & 64 & 64 & 64 & 2 & T & 1 & static & 0\\
+tiled & 0.000880 & 2.384626 & 0.595780 & 64 & 64 & 64 & 2 & T & 1 & static & 0\\
+blas & 0.000076 & 2.384626 & 6.893490 & 64 & 64 & 64 & 2 & T & 1 & static & 0\\
+naive & 0.000296 & 2.384626 & 1.771977 & 64 & 64 & 64 & 4 & T & 1 & static & 0\\
+saxpy & 0.000150 & 2.384626 & 3.496062 & 64 & 64 & 64 & 4 & T & 1 & static & 0\\
+\addlinespace
+tiled & 0.000531 & 2.384626 & 0.986994 & 64 & 64 & 64 & 4 & T & 1 & static & 0\\
+blas & 0.000076 & 2.384626 & 6.893490 & 64 & 64 & 64 & 4 & T & 1 & static & 0\\
+naive & 0.000296 & 2.384626 & 1.771977 & 64 & 64 & 64 & 8 & T & 1 & static & 0\\
+saxpy & 0.000150 & 2.384626 & 3.496062 & 64 & 64 & 64 & 8 & T & 1 & static & 0\\
+tiled & 0.000297 & 2.384626 & 1.764866 & 64 & 64 & 64 & 8 & T & 1 & static & 0\\
+\addlinespace
+blas & 0.000076 & 2.384626 & 6.893490 & 64 & 64 & 64 & 8 & T & 1 & static & 0\\
+naive & 0.000296 & 2.384626 & 1.771977 & 64 & 64 & 64 & 16 & T & 1 & static & 0\\
+saxpy & 0.000150 & 2.384626 & 3.496062 & 64 & 64 & 64 & 16 & T & 1 & static & 0\\
+tiled & 0.000212 & 2.384626 & 2.473592 & 64 & 64 & 64 & 16 & T & 1 & static & 0\\
+blas & 0.000076 & 2.384626 & 6.893490 & 64 & 64 & 64 & 16 & T & 1 & static & 0\\
+\addlinespace
+naive & 0.000296 & 2.384626 & 1.771977 & 64 & 64 & 64 & 32 & T & 1 & static & 0\\
+saxpy & 0.000150 & 2.384626 & 3.496062 & 64 & 64 & 64 & 32 & T & 1 & static & 0\\
+tiled & 0.000128 & 2.384626 & 4.095015 & 64 & 64 & 64 & 32 & T & 1 & static & 0\\
+blas & 0.000076 & 2.384626 & 6.893490 & 64 & 64 & 64 & 32 & T & 1 & static & 0\\
+naive & 0.000296 & 2.384626 & 1.771977 & 64 & 64 & 64 & 64 & T & 1 & static & 0\\
+\addlinespace
+saxpy & 0.000150 & 2.384626 & 3.496062 & 64 & 64 & 64 & 64 & T & 1 & static & 0\\
+tiled & 0.000125 & 2.384626 & 4.196609 & 64 & 64 & 64 & 64 & T & 1 & static & 0\\
+blas & 0.000076 & 2.384626 & 6.893490 & 64 & 64 & 64 & 64 & T & 1 & static & 0\\
+naive & 0.000296 & 2.384626 & 1.771977 & 64 & 64 & 64 & 128 & T & 1 & static & 0\\
+saxpy & 0.000150 & 2.384626 & 3.496062 & 64 & 64 & 64 & 128 & T & 1 & static & 0\\
+\addlinespace
+tiled & 0.000114 & 2.384626 & 4.590863 & 64 & 64 & 64 & 128 & T & 1 & static & 0\\
+blas & 0.000076 & 2.384626 & 6.893490 & 64 & 64 & 64 & 128 & T & 1 & static & 0\\
+naive & 0.000296 & 2.384626 & 1.771977 & 64 & 64 & 64 & 256 & T & 1 & static & 0\\
+saxpy & 0.000150 & 2.384626 & 3.496062 & 64 & 64 & 64 & 256 & T & 1 & static & 0\\
+tiled & 0.000114 & 2.384626 & 4.600467 & 64 & 64 & 64 & 256 & T & 1 & static & 0\\
+\addlinespace
+blas & 0.000076 & 2.384626 & 6.893490 & 64 & 64 & 64 & 256 & T & 1 & static & 0\\
+naive & 0.000296 & 2.384626 & 1.771977 & 64 & 64 & 64 & 512 & T & 1 & static & 0\\
+saxpy & 0.000150 & 2.384626 & 3.496062 & 64 & 64 & 64 & 512 & T & 1 & static & 0\\
+tiled & 0.000114 & 2.384626 & 4.600467 & 64 & 64 & 64 & 512 & T & 1 & static & 0\\
+blas & 0.000076 & 2.384626 & 6.893490 & 64 & 64 & 64 & 512 & T & 1 & static & 0\\
+\addlinespace
+naive & 0.000296 & 2.384626 & 1.771977 & 64 & 64 & 64 & 1024 & T & 1 & static & 0\\
+saxpy & 0.000150 & 2.384626 & 3.496062 & 64 & 64 & 64 & 1024 & T & 1 & static & 0\\
+tiled & 0.000116 & 2.384626 & 4.524739 & 64 & 64 & 64 & 1024 & T & 1 & static & 0\\
+blas & 0.000076 & 2.384626 & 6.893490 & 64 & 64 & 64 & 1024 & T & 1 & static & 0\\
+naive & 0.002666 & 2.352910 & 1.573259 & 128 & 128 & 128 & 1 & T & 1 & static & 0\\
+\addlinespace
+saxpy & 0.001228 & 2.352910 & 3.415958 & 128 & 128 & 128 & 1 & T & 1 & static & 0\\
+tiled & 0.016335 & 2.352910 & 0.256768 & 128 & 128 & 128 & 1 & T & 1 & static & 0\\
+blas & 0.000248 & 2.352910 & 16.915564 & 128 & 128 & 128 & 1 & T & 1 & static & 0\\
+naive & 0.002666 & 2.352910 & 1.573259 & 128 & 128 & 128 & 2 & T & 1 & static & 0\\
+saxpy & 0.001228 & 2.352910 & 3.415958 & 128 & 128 & 128 & 2 & T & 1 & static & 0\\
+\addlinespace
+tiled & 0.006827 & 2.352910 & 0.614381 & 128 & 128 & 128 & 2 & T & 1 & static & 0\\
+blas & 0.000248 & 2.352910 & 16.915564 & 128 & 128 & 128 & 2 & T & 1 & static & 0\\
+naive & 0.002666 & 2.352910 & 1.573259 & 128 & 128 & 128 & 4 & T & 1 & static & 0\\
+saxpy & 0.001228 & 2.352910 & 3.415958 & 128 & 128 & 128 & 4 & T & 1 & static & 0\\
+tiled & 0.004344 & 2.352910 & 0.965543 & 128 & 128 & 128 & 4 & T & 1 & static & 0\\
+\addlinespace
+blas & 0.000248 & 2.352910 & 16.915564 & 128 & 128 & 128 & 4 & T & 1 & static & 0\\
+naive & 0.002666 & 2.352910 & 1.573259 & 128 & 128 & 128 & 8 & T & 1 & static & 0\\
+saxpy & 0.001228 & 2.352910 & 3.415958 & 128 & 128 & 128 & 8 & T & 1 & static & 0\\
+tiled & 0.002364 & 2.352910 & 1.774300 & 128 & 128 & 128 & 8 & T & 1 & static & 0\\
+blas & 0.000248 & 2.352910 & 16.915564 & 128 & 128 & 128 & 8 & T & 1 & static & 0\\
+\addlinespace
+naive & 0.002666 & 2.352910 & 1.573259 & 128 & 128 & 128 & 16 & T & 1 & static & 0\\
+saxpy & 0.001228 & 2.352910 & 3.415958 & 128 & 128 & 128 & 16 & T & 1 & static & 0\\
+tiled & 0.001610 & 2.352910 & 2.605092 & 128 & 128 & 128 & 16 & T & 1 & static & 0\\
+blas & 0.000248 & 2.352910 & 16.915564 & 128 & 128 & 128 & 16 & T & 1 & static & 0\\
+naive & 0.002666 & 2.352910 & 1.573259 & 128 & 128 & 128 & 32 & T & 1 & static & 0\\
+\addlinespace
+saxpy & 0.001228 & 2.352910 & 3.415958 & 128 & 128 & 128 & 32 & T & 1 & static & 0\\
+tiled & 0.001078 & 2.352910 & 3.890355 & 128 & 128 & 128 & 32 & T & 1 & static & 0\\
+blas & 0.000248 & 2.352910 & 16.915564 & 128 & 128 & 128 & 32 & T & 1 & static & 0\\
+naive & 0.002666 & 2.352910 & 1.573259 & 128 & 128 & 128 & 64 & T & 1 & static & 0\\
+saxpy & 0.001228 & 2.352910 & 3.415958 & 128 & 128 & 128 & 64 & T & 1 & static & 0\\
+\addlinespace
+tiled & 0.000828 & 2.352910 & 5.065415 & 128 & 128 & 128 & 64 & T & 1 & static & 0\\
+blas & 0.000248 & 2.352910 & 16.915564 & 128 & 128 & 128 & 64 & T & 1 & static & 0\\
+naive & 0.002666 & 2.352910 & 1.573259 & 128 & 128 & 128 & 128 & T & 1 & static & 0\\
+saxpy & 0.001228 & 2.352910 & 3.415958 & 128 & 128 & 128 & 128 & T & 1 & static & 0\\
+tiled & 0.000696 & 2.352910 & 6.026785 & 128 & 128 & 128 & 128 & T & 1 & static & 0\\
+\addlinespace
+blas & 0.000248 & 2.352910 & 16.915564 & 128 & 128 & 128 & 128 & T & 1 & static & 0\\
+naive & 0.002666 & 2.352910 & 1.573259 & 128 & 128 & 128 & 256 & T & 1 & static & 0\\
+saxpy & 0.001228 & 2.352910 & 3.415958 & 128 & 128 & 128 & 256 & T & 1 & static & 0\\
+tiled & 0.000700 & 2.352910 & 5.991889 & 128 & 128 & 128 & 256 & T & 1 & static & 0\\
+blas & 0.000248 & 2.352910 & 16.915564 & 128 & 128 & 128 & 256 & T & 1 & static & 0\\
+\addlinespace
+naive & 0.002666 & 2.352910 & 1.573259 & 128 & 128 & 128 & 512 & T & 1 & static & 0\\
+saxpy & 0.001228 & 2.352910 & 3.415958 & 128 & 128 & 128 & 512 & T & 1 & static & 0\\
+tiled & 0.000695 & 2.352910 & 6.035055 & 128 & 128 & 128 & 512 & T & 1 & static & 0\\
+blas & 0.000248 & 2.352910 & 16.915564 & 128 & 128 & 128 & 512 & T & 1 & static & 0\\
+naive & 0.002666 & 2.352910 & 1.573259 & 128 & 128 & 128 & 1024 & T & 1 & static & 0\\
+\addlinespace
+saxpy & 0.001228 & 2.352910 & 3.415958 & 128 & 128 & 128 & 1024 & T & 1 & static & 0\\
+tiled & 0.000688 & 2.352910 & 6.095699 & 128 & 128 & 128 & 1024 & T & 1 & static & 0\\
+blas & 0.000248 & 2.352910 & 16.915564 & 128 & 128 & 128 & 1024 & T & 1 & static & 0\\
+naive & 0.030807 & 2.337129 & 1.089181 & 256 & 256 & 256 & 1 & T & 1 & static & 0\\
+saxpy & 0.010599 & 2.337129 & 3.165842 & 256 & 256 & 256 & 1 & T & 1 & static & 0\\
+\addlinespace
+tiled & 0.115740 & 2.337129 & 0.289912 & 256 & 256 & 256 & 1 & T & 1 & static & 0\\
+blas & 0.001751 & 2.337129 & 19.163601 & 256 & 256 & 256 & 1 & T & 1 & static & 0\\
+naive & 0.030807 & 2.337129 & 1.089181 & 256 & 256 & 256 & 2 & T & 1 & static & 0\\
+saxpy & 0.010599 & 2.337129 & 3.165842 & 256 & 256 & 256 & 2 & T & 1 & static & 0\\
+tiled & 0.067579 & 2.337129 & 0.496521 & 256 & 256 & 256 & 2 & T & 1 & static & 0\\
+\addlinespace
+blas & 0.001751 & 2.337129 & 19.163601 & 256 & 256 & 256 & 2 & T & 1 & static & 0\\
+naive & 0.030807 & 2.337129 & 1.089181 & 256 & 256 & 256 & 4 & T & 1 & static & 0\\
+saxpy & 0.010599 & 2.337129 & 3.165842 & 256 & 256 & 256 & 4 & T & 1 & static & 0\\
+tiled & 0.033115 & 2.337129 & 1.013265 & 256 & 256 & 256 & 4 & T & 1 & static & 0\\
+blas & 0.001751 & 2.337129 & 19.163601 & 256 & 256 & 256 & 4 & T & 1 & static & 0\\
+\addlinespace
+naive & 0.030807 & 2.337129 & 1.089181 & 256 & 256 & 256 & 8 & T & 1 & static & 0\\
+saxpy & 0.010599 & 2.337129 & 3.165842 & 256 & 256 & 256 & 8 & T & 1 & static & 0\\
+tiled & 0.018756 & 2.337129 & 1.789006 & 256 & 256 & 256 & 8 & T & 1 & static & 0\\
+blas & 0.001751 & 2.337129 & 19.163601 & 256 & 256 & 256 & 8 & T & 1 & static & 0\\
+naive & 0.030807 & 2.337129 & 1.089181 & 256 & 256 & 256 & 16 & T & 1 & static & 0\\
+\addlinespace
+saxpy & 0.010599 & 2.337129 & 3.165842 & 256 & 256 & 256 & 16 & T & 1 & static & 0\\
+tiled & 0.013726 & 2.337129 & 2.444590 & 256 & 256 & 256 & 16 & T & 1 & static & 0\\
+blas & 0.001751 & 2.337129 & 19.163601 & 256 & 256 & 256 & 16 & T & 1 & static & 0\\
+naive & 0.030807 & 2.337129 & 1.089181 & 256 & 256 & 256 & 32 & T & 1 & static & 0\\
+saxpy & 0.010599 & 2.337129 & 3.165842 & 256 & 256 & 256 & 32 & T & 1 & static & 0\\
+\addlinespace
+tiled & 0.008809 & 2.337129 & 3.809069 & 256 & 256 & 256 & 32 & T & 1 & static & 0\\
+blas & 0.001751 & 2.337129 & 19.163601 & 256 & 256 & 256 & 32 & T & 1 & static & 0\\
+naive & 0.030807 & 2.337129 & 1.089181 & 256 & 256 & 256 & 64 & T & 1 & static & 0\\
+saxpy & 0.010599 & 2.337129 & 3.165842 & 256 & 256 & 256 & 64 & T & 1 & static & 0\\
+tiled & 0.006737 & 2.337129 & 4.980624 & 256 & 256 & 256 & 64 & T & 1 & static & 0\\
+\addlinespace
+blas & 0.001751 & 2.337129 & 19.163601 & 256 & 256 & 256 & 64 & T & 1 & static & 0\\
+naive & 0.030807 & 2.337129 & 1.089181 & 256 & 256 & 256 & 128 & T & 1 & static & 0\\
+saxpy & 0.010599 & 2.337129 & 3.165842 & 256 & 256 & 256 & 128 & T & 1 & static & 0\\
+tiled & 0.006585 & 2.337129 & 5.095492 & 256 & 256 & 256 & 128 & T & 1 & static & 0\\
+blas & 0.001751 & 2.337129 & 19.163601 & 256 & 256 & 256 & 128 & T & 1 & static & 0\\
+\addlinespace
+naive & 0.030807 & 2.337129 & 1.089181 & 256 & 256 & 256 & 256 & T & 1 & static & 0\\
+saxpy & 0.010599 & 2.337129 & 3.165842 & 256 & 256 & 256 & 256 & T & 1 & static & 0\\
+tiled & 0.006449 & 2.337129 & 5.203057 & 256 & 256 & 256 & 256 & T & 1 & static & 0\\
+blas & 0.001751 & 2.337129 & 19.163601 & 256 & 256 & 256 & 256 & T & 1 & static & 0\\
+naive & 0.030807 & 2.337129 & 1.089181 & 256 & 256 & 256 & 512 & T & 1 & static & 0\\
+\addlinespace
+saxpy & 0.010599 & 2.337129 & 3.165842 & 256 & 256 & 256 & 512 & T & 1 & static & 0\\
+tiled & 0.005928 & 2.337129 & 5.660292 & 256 & 256 & 256 & 512 & T & 1 & static & 0\\
+blas & 0.001751 & 2.337129 & 19.163601 & 256 & 256 & 256 & 512 & T & 1 & static & 0\\
+naive & 0.030807 & 2.337129 & 1.089181 & 256 & 256 & 256 & 1024 & T & 1 & static & 0\\
+saxpy & 0.010599 & 2.337129 & 3.165842 & 256 & 256 & 256 & 1024 & T & 1 & static & 0\\
+\addlinespace
+tiled & 0.005927 & 2.337129 & 5.661430 & 256 & 256 & 256 & 1024 & T & 1 & static & 0\\
+blas & 0.001751 & 2.337129 & 19.163601 & 256 & 256 & 256 & 1024 & T & 1 & static & 0\\
+naive & 0.355430 & 2.329257 & 0.755241 & 512 & 512 & 512 & 1 & T & 1 & static & 0\\
+saxpy & 0.100939 & 2.329257 & 2.659382 & 512 & 512 & 512 & 1 & T & 1 & static & 0\\
+tiled & 0.961509 & 2.329257 & 0.279181 & 512 & 512 & 512 & 1 & T & 1 & static & 0\\
+\addlinespace
+blas & 0.006349 & 2.329257 & 42.280968 & 512 & 512 & 512 & 1 & T & 1 & static & 0\\
+naive & 0.355430 & 2.329257 & 0.755241 & 512 & 512 & 512 & 2 & T & 1 & static & 0\\
+saxpy & 0.100939 & 2.329257 & 2.659382 & 512 & 512 & 512 & 2 & T & 1 & static & 0\\
+tiled & 0.488459 & 2.329257 & 0.549556 & 512 & 512 & 512 & 2 & T & 1 & static & 0\\
+blas & 0.006349 & 2.329257 & 42.280968 & 512 & 512 & 512 & 2 & T & 1 & static & 0\\
+\addlinespace
+naive & 0.355430 & 2.329257 & 0.755241 & 512 & 512 & 512 & 4 & T & 1 & static & 0\\
+saxpy & 0.100939 & 2.329257 & 2.659382 & 512 & 512 & 512 & 4 & T & 1 & static & 0\\
+tiled & 0.288009 & 2.329257 & 0.932039 & 512 & 512 & 512 & 4 & T & 1 & static & 0\\
+blas & 0.006349 & 2.329257 & 42.280968 & 512 & 512 & 512 & 4 & T & 1 & static & 0\\
+naive & 0.355430 & 2.329257 & 0.755241 & 512 & 512 & 512 & 8 & T & 1 & static & 0\\
+\addlinespace
+saxpy & 0.100939 & 2.329257 & 2.659382 & 512 & 512 & 512 & 8 & T & 1 & static & 0\\
+tiled & 0.171141 & 2.329257 & 1.568505 & 512 & 512 & 512 & 8 & T & 1 & static & 0\\
+blas & 0.006349 & 2.329257 & 42.280968 & 512 & 512 & 512 & 8 & T & 1 & static & 0\\
+naive & 0.355430 & 2.329257 & 0.755241 & 512 & 512 & 512 & 16 & T & 1 & static & 0\\
+saxpy & 0.100939 & 2.329257 & 2.659382 & 512 & 512 & 512 & 16 & T & 1 & static & 0\\
+\addlinespace
+tiled & 0.112040 & 2.329257 & 2.395889 & 512 & 512 & 512 & 16 & T & 1 & static & 0\\
+blas & 0.006349 & 2.329257 & 42.280968 & 512 & 512 & 512 & 16 & T & 1 & static & 0\\
+naive & 0.355430 & 2.329257 & 0.755241 & 512 & 512 & 512 & 32 & T & 1 & static & 0\\
+saxpy & 0.100939 & 2.329257 & 2.659382 & 512 & 512 & 512 & 32 & T & 1 & static & 0\\
+tiled & 0.080282 & 2.329257 & 3.343658 & 512 & 512 & 512 & 32 & T & 1 & static & 0\\
+\addlinespace
+blas & 0.006349 & 2.329257 & 42.280968 & 512 & 512 & 512 & 32 & T & 1 & static & 0\\
+naive & 0.355430 & 2.329257 & 0.755241 & 512 & 512 & 512 & 64 & T & 1 & static & 0\\
+saxpy & 0.100939 & 2.329257 & 2.659382 & 512 & 512 & 512 & 64 & T & 1 & static & 0\\
+tiled & 0.064778 & 2.329257 & 4.143924 & 512 & 512 & 512 & 64 & T & 1 & static & 0\\
+blas & 0.006349 & 2.329257 & 42.280968 & 512 & 512 & 512 & 64 & T & 1 & static & 0\\
+\addlinespace
+naive & 0.355430 & 2.329257 & 0.755241 & 512 & 512 & 512 & 128 & T & 1 & static & 0\\
+saxpy & 0.100939 & 2.329257 & 2.659382 & 512 & 512 & 512 & 128 & T & 1 & static & 0\\
+tiled & 0.058957 & 2.329257 & 4.553083 & 512 & 512 & 512 & 128 & T & 1 & static & 0\\
+blas & 0.006349 & 2.329257 & 42.280968 & 512 & 512 & 512 & 128 & T & 1 & static & 0\\
+naive & 0.355430 & 2.329257 & 0.755241 & 512 & 512 & 512 & 256 & T & 1 & static & 0\\
+\addlinespace
+saxpy & 0.100939 & 2.329257 & 2.659382 & 512 & 512 & 512 & 256 & T & 1 & static & 0\\
+tiled & 0.056794 & 2.329257 & 4.726482 & 512 & 512 & 512 & 256 & T & 1 & static & 0\\
+blas & 0.006349 & 2.329257 & 42.280968 & 512 & 512 & 512 & 256 & T & 1 & static & 0\\
+naive & 0.355430 & 2.329257 & 0.755241 & 512 & 512 & 512 & 512 & T & 1 & static & 0\\
+saxpy & 0.100939 & 2.329257 & 2.659382 & 512 & 512 & 512 & 512 & T & 1 & static & 0\\
+\addlinespace
+tiled & 0.064939 & 2.329257 & 4.133654 & 512 & 512 & 512 & 512 & T & 1 & static & 0\\
+blas & 0.006349 & 2.329257 & 42.280968 & 512 & 512 & 512 & 512 & T & 1 & static & 0\\
+naive & 0.355430 & 2.329257 & 0.755241 & 512 & 512 & 512 & 1024 & T & 1 & static & 0\\
+saxpy & 0.100939 & 2.329257 & 2.659382 & 512 & 512 & 512 & 1024 & T & 1 & static & 0\\
+tiled & 0.059735 & 2.329257 & 4.493785 & 512 & 512 & 512 & 1024 & T & 1 & static & 0\\
+\addlinespace
+blas & 0.006349 & 2.329257 & 42.280968 & 512 & 512 & 512 & 1024 & T & 1 & static & 0\\
+naive & 4.502494 & 2.325326 & 0.476954 & 1024 & 1024 & 1024 & 1 & T & 1 & static & 0\\
+saxpy & 0.755399 & 2.325326 & 2.842847 & 1024 & 1024 & 1024 & 1 & T & 1 & static & 0\\
+tiled & 7.796041 & 2.325326 & 0.275458 & 1024 & 1024 & 1024 & 1 & T & 1 & static & 0\\
+blas & 0.048850 & 2.325326 & 43.960717 & 1024 & 1024 & 1024 & 1 & T & 1 & static & 0\\
+\addlinespace
+naive & 4.502494 & 2.325326 & 0.476954 & 1024 & 1024 & 1024 & 2 & T & 1 & static & 0\\
+saxpy & 0.755399 & 2.325326 & 2.842847 & 1024 & 1024 & 1024 & 2 & T & 1 & static & 0\\
+tiled & 3.628601 & 2.325326 & 0.591821 & 1024 & 1024 & 1024 & 2 & T & 1 & static & 0\\
+blas & 0.048850 & 2.325326 & 43.960717 & 1024 & 1024 & 1024 & 2 & T & 1 & static & 0\\
+naive & 4.502494 & 2.325326 & 0.476954 & 1024 & 1024 & 1024 & 4 & T & 1 & static & 0\\
+\addlinespace
+saxpy & 0.755399 & 2.325326 & 2.842847 & 1024 & 1024 & 1024 & 4 & T & 1 & static & 0\\
+tiled & 2.193913 & 2.325326 & 0.978837 & 1024 & 1024 & 1024 & 4 & T & 1 & static & 0\\
+blas & 0.048850 & 2.325326 & 43.960717 & 1024 & 1024 & 1024 & 4 & T & 1 & static & 0\\
+naive & 4.502494 & 2.325326 & 0.476954 & 1024 & 1024 & 1024 & 8 & T & 1 & static & 0\\
+saxpy & 0.755399 & 2.325326 & 2.842847 & 1024 & 1024 & 1024 & 8 & T & 1 & static & 0\\
+\addlinespace
+tiled & 1.511985 & 2.325326 & 1.420307 & 1024 & 1024 & 1024 & 8 & T & 1 & static & 0\\
+blas & 0.048850 & 2.325326 & 43.960717 & 1024 & 1024 & 1024 & 8 & T & 1 & static & 0\\
+naive & 4.502494 & 2.325326 & 0.476954 & 1024 & 1024 & 1024 & 16 & T & 1 & static & 0\\
+saxpy & 0.755399 & 2.325326 & 2.842847 & 1024 & 1024 & 1024 & 16 & T & 1 & static & 0\\
+tiled & 0.913559 & 2.325326 & 2.350679 & 1024 & 1024 & 1024 & 16 & T & 1 & static & 0\\
+\addlinespace
+blas & 0.048850 & 2.325326 & 43.960717 & 1024 & 1024 & 1024 & 16 & T & 1 & static & 0\\
+naive & 4.502494 & 2.325326 & 0.476954 & 1024 & 1024 & 1024 & 32 & T & 1 & static & 0\\
+saxpy & 0.755399 & 2.325326 & 2.842847 & 1024 & 1024 & 1024 & 32 & T & 1 & static & 0\\
+tiled & 0.635872 & 2.325326 & 3.377227 & 1024 & 1024 & 1024 & 32 & T & 1 & static & 0\\
+blas & 0.048850 & 2.325326 & 43.960717 & 1024 & 1024 & 1024 & 32 & T & 1 & static & 0\\
+\addlinespace
+naive & 4.502494 & 2.325326 & 0.476954 & 1024 & 1024 & 1024 & 64 & T & 1 & static & 0\\
+saxpy & 0.755399 & 2.325326 & 2.842847 & 1024 & 1024 & 1024 & 64 & T & 1 & static & 0\\
+tiled & 0.651639 & 2.325326 & 3.295511 & 1024 & 1024 & 1024 & 64 & T & 1 & static & 0\\
+blas & 0.048850 & 2.325326 & 43.960717 & 1024 & 1024 & 1024 & 64 & T & 1 & static & 0\\
+naive & 4.502494 & 2.325326 & 0.476954 & 1024 & 1024 & 1024 & 128 & T & 1 & static & 0\\
+\addlinespace
+saxpy & 0.755399 & 2.325326 & 2.842847 & 1024 & 1024 & 1024 & 128 & T & 1 & static & 0\\
+tiled & 0.484284 & 2.325326 & 4.434346 & 1024 & 1024 & 1024 & 128 & T & 1 & static & 0\\
+blas & 0.048850 & 2.325326 & 43.960717 & 1024 & 1024 & 1024 & 128 & T & 1 & static & 0\\
+naive & 4.502494 & 2.325326 & 0.476954 & 1024 & 1024 & 1024 & 256 & T & 1 & static & 0\\
+saxpy & 0.755399 & 2.325326 & 2.842847 & 1024 & 1024 & 1024 & 256 & T & 1 & static & 0\\
+\addlinespace
+tiled & 0.505454 & 2.325326 & 4.248623 & 1024 & 1024 & 1024 & 256 & T & 1 & static & 0\\
+blas & 0.048850 & 2.325326 & 43.960717 & 1024 & 1024 & 1024 & 256 & T & 1 & static & 0\\
+naive & 4.502494 & 2.325326 & 0.476954 & 1024 & 1024 & 1024 & 512 & T & 1 & static & 0\\
+saxpy & 0.755399 & 2.325326 & 2.842847 & 1024 & 1024 & 1024 & 512 & T & 1 & static & 0\\
+tiled & 0.465033 & 2.325326 & 4.617916 & 1024 & 1024 & 1024 & 512 & T & 1 & static & 0\\
+\addlinespace
+blas & 0.048850 & 2.325326 & 43.960717 & 1024 & 1024 & 1024 & 512 & T & 1 & static & 0\\
+naive & 4.502494 & 2.325326 & 0.476954 & 1024 & 1024 & 1024 & 1024 & T & 1 & static & 0\\
+saxpy & 0.755399 & 2.325326 & 2.842847 & 1024 & 1024 & 1024 & 1024 & T & 1 & static & 0\\
+tiled & 0.557365 & 2.325326 & 3.852920 & 1024 & 1024 & 1024 & 1024 & T & 1 & static & 0\\
+blas & 0.048850 & 2.325326 & 43.960717 & 1024 & 1024 & 1024 & 1024 & T & 1 & static & 0\\
+\addlinespace
+naive & 84.985595 & 2.323362 & 0.202150 & 2048 & 2048 & 2048 & 1 & T & 1 & static & 0\\
+saxpy & 6.965758 & 2.323362 & 2.466332 & 2048 & 2048 & 2048 & 1 & T & 1 & static & 0\\
+tiled & 57.221553 & 2.323362 & 0.300234 & 2048 & 2048 & 2048 & 1 & T & 1 & static & 0\\
+blas & 0.375638 & 2.323362 & 45.735173 & 2048 & 2048 & 2048 & 1 & T & 1 & static & 0\\
+naive & 84.985595 & 2.323362 & 0.202150 & 2048 & 2048 & 2048 & 2 & T & 1 & static & 0\\
+\addlinespace
+saxpy & 6.965758 & 2.323362 & 2.466332 & 2048 & 2048 & 2048 & 2 & T & 1 & static & 0\\
+tiled & 30.602249 & 2.323362 & 0.561392 & 2048 & 2048 & 2048 & 2 & T & 1 & static & 0\\
+blas & 0.375638 & 2.323362 & 45.735173 & 2048 & 2048 & 2048 & 2 & T & 1 & static & 0\\
+naive & 84.985595 & 2.323362 & 0.202150 & 2048 & 2048 & 2048 & 4 & T & 1 & static & 0\\
+saxpy & 6.965758 & 2.323362 & 2.466332 & 2048 & 2048 & 2048 & 4 & T & 1 & static & 0\\
+\addlinespace
+tiled & 28.968410 & 2.323362 & 0.593055 & 2048 & 2048 & 2048 & 4 & T & 1 & static & 0\\
+blas & 0.375638 & 2.323362 & 45.735173 & 2048 & 2048 & 2048 & 4 & T & 1 & static & 0\\
+naive & 84.985595 & 2.323362 & 0.202150 & 2048 & 2048 & 2048 & 8 & T & 1 & static & 0\\
+saxpy & 6.965758 & 2.323362 & 2.466332 & 2048 & 2048 & 2048 & 8 & T & 1 & static & 0\\
+tiled & 14.942199 & 2.323362 & 1.149755 & 2048 & 2048 & 2048 & 8 & T & 1 & static & 0\\
+\addlinespace
+blas & 0.375638 & 2.323362 & 45.735173 & 2048 & 2048 & 2048 & 8 & T & 1 & static & 0\\
+naive & 84.985595 & 2.323362 & 0.202150 & 2048 & 2048 & 2048 & 16 & T & 1 & static & 0\\
+saxpy & 6.965758 & 2.323362 & 2.466332 & 2048 & 2048 & 2048 & 16 & T & 1 & static & 0\\
+tiled & 10.509627 & 2.323362 & 1.634679 & 2048 & 2048 & 2048 & 16 & T & 1 & static & 0\\
+blas & 0.375638 & 2.323362 & 45.735173 & 2048 & 2048 & 2048 & 16 & T & 1 & static & 0\\
+\addlinespace
+naive & 84.985595 & 2.323362 & 0.202150 & 2048 & 2048 & 2048 & 32 & T & 1 & static & 0\\
+saxpy & 6.965758 & 2.323362 & 2.466332 & 2048 & 2048 & 2048 & 32 & T & 1 & static & 0\\
+tiled & 5.143878 & 2.323362 & 3.339867 & 2048 & 2048 & 2048 & 32 & T & 1 & static & 0\\
+blas & 0.375638 & 2.323362 & 45.735173 & 2048 & 2048 & 2048 & 32 & T & 1 & static & 0\\
+naive & 84.985595 & 2.323362 & 0.202150 & 2048 & 2048 & 2048 & 64 & T & 1 & static & 0\\
+\addlinespace
+saxpy & 6.965758 & 2.323362 & 2.466332 & 2048 & 2048 & 2048 & 64 & T & 1 & static & 0\\
+tiled & 5.101301 & 2.323362 & 3.367743 & 2048 & 2048 & 2048 & 64 & T & 1 & static & 0\\
+blas & 0.375638 & 2.323362 & 45.735173 & 2048 & 2048 & 2048 & 64 & T & 1 & static & 0\\
+naive & 84.985595 & 2.323362 & 0.202150 & 2048 & 2048 & 2048 & 128 & T & 1 & static & 0\\
+saxpy & 6.965758 & 2.323362 & 2.466332 & 2048 & 2048 & 2048 & 128 & T & 1 & static & 0\\
+\addlinespace
+tiled & 4.096297 & 2.323362 & 4.194000 & 2048 & 2048 & 2048 & 128 & T & 1 & static & 0\\
+blas & 0.375638 & 2.323362 & 45.735173 & 2048 & 2048 & 2048 & 128 & T & 1 & static & 0\\
+naive & 84.985595 & 2.323362 & 0.202150 & 2048 & 2048 & 2048 & 256 & T & 1 & static & 0\\
+saxpy & 6.965758 & 2.323362 & 2.466332 & 2048 & 2048 & 2048 & 256 & T & 1 & static & 0\\
+tiled & 3.745809 & 2.323362 & 4.586424 & 2048 & 2048 & 2048 & 256 & T & 1 & static & 0\\
+\addlinespace
+blas & 0.375638 & 2.323362 & 45.735173 & 2048 & 2048 & 2048 & 256 & T & 1 & static & 0\\
+naive & 84.985595 & 2.323362 & 0.202150 & 2048 & 2048 & 2048 & 512 & T & 1 & static & 0\\
+saxpy & 6.965758 & 2.323362 & 2.466332 & 2048 & 2048 & 2048 & 512 & T & 1 & static & 0\\
+tiled & 3.637349 & 2.323362 & 4.723184 & 2048 & 2048 & 2048 & 512 & T & 1 & static & 0\\
+blas & 0.375638 & 2.323362 & 45.735173 & 2048 & 2048 & 2048 & 512 & T & 1 & static & 0\\
+\addlinespace
+naive & 84.985595 & 2.323362 & 0.202150 & 2048 & 2048 & 2048 & 1024 & T & 1 & static & 0\\
+saxpy & 6.965758 & 2.323362 & 2.466332 & 2048 & 2048 & 2048 & 1024 & T & 1 & static & 0\\
+tiled & 4.407234 & 2.323362 & 3.898107 & 2048 & 2048 & 2048 & 1024 & T & 1 & static & 0\\
+blas & 0.375638 & 2.323362 & 45.735173 & 2048 & 2048 & 2048 & 1024 & T & 1 & static & 0\\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\end{document}
