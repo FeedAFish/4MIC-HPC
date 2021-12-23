@@ -632,7 +632,7 @@ Another property that could be interesting is the version with `OpenMP` is close
 ```{r echo=FALSE}
 part2 = rbind(py$omp_df, py$non_omp_df)
 ```
-```{r echo=FALSE, fig.cap="Computation time in function of matrix size and technique"}
+```{r echo=FALSE, fig.cap="Computational time in function of matrix size"}
 part2[part2$Block == 256,] %>%
     ggplot(aes(x = M, y = Time, shape = OMP, color = Technique, group = interaction(OMP, Technique))) +
     geom_line(alpha = 0.75) +
@@ -753,7 +753,7 @@ In addition, the 4 schedule lines of each technique are overlapping each others 
 -  `dynamic` and `guided` are designed for different situation, where each iteration takes different amount of time to finish their work. There is overhead compared to `static`, however, it does not have big effect on overall performance as our matrices are not too big.
 - `auto` lets the compiler choose how to schedule and divide work among threads, so it is compiler-specific. For example, `gcc` maps `auto` to `static` ^[https://github.com/gcc-mirror/gcc/blob/61e53698a08dc1d9a54d785218af687a6751c1b3/libgomp/loop.c#L195-L198], at a consequence, we see a similar pattern with `static`.
 
-```{r echo=FALSE}
+```{r echo=FALSE, fig.cap="Computational time in function of number of threads"}
 part3 = py$thread_df
 part3 %>%
     ggplot(aes(x = Threads, y = Time, shape = Schedule, color = Technique, group = interaction(Schedule, Technique))) +
@@ -828,7 +828,7 @@ block_df.Technique = pd.Categorical(
 
 ```
 
-```{r echo=FALSE}
+```{r echo=FALSE, fig.cap = "Computational time in function of `BLOCK` size"}
 part4 = py$block_df
 part4 %>%
     ggplot(aes(x = Block, y = Time, shape = OMP, color = Technique, group = interaction(OMP, Technique))) +
