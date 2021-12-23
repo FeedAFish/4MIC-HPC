@@ -869,3 +869,11 @@ printf("Frobenius Norm   = %f\n", norm(N, M, ldc, c));
 // ...
 print_array(M, N, ldc, c);
 ```
+When we fixed `M` and `N` and rerun the code again. It show this output
+```{python echo=FALSE}
+print(
+  "\n".join(compile_raw_output(
+    1, 2, 2, omp=False, printarray=True, naive=True, blas=True, sourcepath="blas3_moodle_mn.c", executable="blas3_moodle_mn"
+  ))
+)
+```
