@@ -864,7 +864,7 @@ double norm(int nrow, int ncol, int ld, double *A);
 void print_array(int nrow, int ncol, int ld, double *A);
 ```
 However, we found below this piece of code that suggests there maybe a mistake between `M` and `N`
-```
+```{c eval=FALSE}
 printf("Frobenius Norm   = %f\n", norm(N, M, ldc, c));
 // ...
 print_array(M, N, ldc, c);
@@ -877,3 +877,47 @@ print(
   ))
 )
 ```
+We succesully fixed the "naive" method but there are still something "weird" with `cblas_dgemm` output. We dig deeper into the [document](https://www.intel.com/content/www/us/en/develop/documentation/onemkl-developer-reference-c/top/blas-and-sparse-blas-routines/blas-routines/blas-level-3-routines/cblas-gemm.html) and found that there is something wrong with 
+```{c eval=FALSE}
+int lda = N + 1;
+int ldb = K + 1;
+int ldc = N + 1;
+
+double *a = (double *)malloc(lda * K * sizeof(double));
+double *b = (double *)malloc(ldb * M * sizeof(double));
+double *c = (double *)malloc(ldc * M * sizeof(double));
+
+// ...
+
+cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, M, N, K, alpha, a, lda,
+            b, ldb, beta, c, ldc);
+```
+
+Here, `a` is supposed to be a `double` pointer whose size is `M * K` but the code above allocated a pointer with the size of `(N + 1) * K`. According to the document, when using with `CblasColMajor` and `CblasNoTrans`, `lda` should be the number of elements in one column, so `lda` is equal to `M`. After editing the code to
+```{c eval=FALSE}
+int lda = M;
+int ldb = K;
+int ldc = M;
+
+double *a = (double *)malloc(lda * K * sizeof(double));
+double *b = (double *)malloc(ldb * N * sizeof(double));
+double *c = (double *)malloc(ldc * N * sizeof(double));
+```
+
+We got the correct result as shown in the [section 1](#techniques).
+
+## Minor issues {-}
+
+When trying to change the schedule, the schedule value is switched. According to the `OpenMP` [document](https://www.openmp.org/spec-html/5.0/openmpsu121.html#x158-7050003.2.12), `guided` should be 3 and `auto` is 4 instead of vice versa.
+
+Finally, we add a
+```
+free(a);
+free(b);
+free(c);
+```
+in the end for preventing memory leaks.
+
+## Source code {-}
+
+Full source code could be found on [github](https://github.com/vnghia/4MIC-HPC).
