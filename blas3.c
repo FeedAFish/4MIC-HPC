@@ -126,11 +126,12 @@ void blocking_dot(double *A, int lda, double *B, int ldb, double *C, int ldc) {
   for (k = 0; k < K; k += BLOCK) {
     for (j = 0; j < N; j += BLOCK) {
       for (i = 0; i < M; i += BLOCK) {
-        int kmin = fmin(K - k, BLOCK);
+        int kmin = fmin(K - k, BLOCK);  // in case K is not divisible by BLOCK
         for (kk = 0; kk < kmin; kk++) {
-          int jmin = fmin(N - j, BLOCK);
+          int jmin = fmin(N - j, BLOCK);  // in case N is not divisible by BLOCK
           for (jj = 0; jj < jmin; jj++) {
-            int imin = fmin(M - i, BLOCK);
+            int imin =
+                fmin(M - i, BLOCK);  // in case M is not divisible by BLOCK
             for (ii = 0; ii < imin; ii++) {
               C[(ii + i) + ldc * (jj + j)] +=
                   A[(ii + i) + lda * (kk + k)] * B[(kk + k) + ldb * (jj + j)];
@@ -169,9 +170,9 @@ int main() {
   } else if (kind == 2) {
     printf("Scheduling dynamic with chunk = %d\n\n", chunk_size);
   } else if (kind == 3) {
-    printf("Scheduling auto with chunk = %d\n\n", chunk_size);
-  } else if (kind == 4) {
     printf("Scheduling guided with chunk = %d\n\n", chunk_size);
+  } else if (kind == 4) {
+    printf("Scheduling auto with chunk = %d\n\n", chunk_size);
   }
 
   /* Initialization of A and B matrices */
