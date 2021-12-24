@@ -433,7 +433,7 @@ for (k = 0; k < K; k++)
 For comparision, we have a table below with small `M`, `K`, `N` (`OMP` indicates if we enable `OpenMP` or not).
 ```{python include=FALSE}
 small_naive_saxpy_df = compile_and_run(
-  4, 8, 4, omp=False, printarray=True, naive=True, saxpy=True
+  4, 8, 4, omp=False, schedule="static", chunk=0, printarray=True, naive=True, saxpy=True
 )
 ```
 ```{r echo=FALSE}
@@ -454,7 +454,7 @@ We have the frobenius norm of both techniques are `r to_float_str(py$small_naive
 However, if we set `M`, `K`, `N` to 2048. There will be a huge performance gain as in the table shown below.
 ```{python include=FALSE}
 big_naive_saxpy_df = compile_and_run(
-  2048, 2048, 2048, omp=False, naive=True, saxpy=True
+  2048, 2048, 2048, omp=False, schedule="static", chunk=0, naive=True, saxpy=True
 )
 ```
 ```{r echo=FALSE}
@@ -478,7 +478,7 @@ For parallelism, we add a directive `#pragma omp parallel for schedule(runtime) 
 
 ```{python include=FALSE}
 big_omp_naive_saxpy_df = compile_and_run(
-  2048, 2048, 2048, omp=True, naive=True, saxpy=True
+  2048, 2048, 2048, omp=True, schedule="static", chunk=0, naive=True, saxpy=True
 )
 ```
 ```{r echo=FALSE}
@@ -518,10 +518,10 @@ for (k = 0; k < K; k += BLOCK) {
 ```
 ```{python include=FALSE}
 blocking_df = compile_and_run(
-  2048, 2048, 2048, 256, omp=False, naive=True, saxpy=True, tiled=True,
+  2048, 2048, 2048, 256, omp=False, schedule="static", chunk=0, naive=True, saxpy=True, tiled=True,
 )
 blocking_omp_df = compile_and_run(
-  2048, 2048, 2048, 256, omp=True, naive=True, saxpy=True, tiled=True,
+  2048, 2048, 2048, 256, omp=True, schedule="static", chunk=0, naive=True, saxpy=True, tiled=True,
 )
 ```
 
@@ -545,7 +545,7 @@ rbind(py$blocking_df, py$blocking_omp_df) %>%
 One last technique that is used in our code is calling the `cblas_dgemm` function which use the optimized BLAS implementation. This function is the fastest method even if other methods are *"cheated"* (by using `OpenMP`)  as their implementation is optimized based on many factors: algorithms, software and hardware.
 ```{python include=FALSE}
 all_df = compile_and_run(
-  2048, 2048, 2048, 256, omp=True, naive=True, saxpy=True, tiled=True, blas=True,
+  2048, 2048, 2048, 256, omp=True, schedule="static", chunk=0, naive=True, saxpy=True, tiled=True, blas=True,
 )
 ```
 ```{r echo=FALSE}
@@ -560,7 +560,9 @@ py$all_df %>%
   kable_styling(latex_options = c("hold_position", "scale_down"))
 ```
 
-# Sequential
+# Benchmarks
+
+## Sequential
 
 In this section, we fix `OMP_NUM_TREADS=1` for each run and vary the matrix size. (We don't care about schedule because there is only 1 thread).
 
@@ -589,6 +591,8 @@ else:
                     block,
                     True,
                     1,
+                    schedule="static", 
+                    chunk=0, 
                     naive=True,
                     saxpy=True,
                     tiled=True,
@@ -603,6 +607,8 @@ else:
                     block,
                     False,
                     1,
+                    schedule="static", 
+                    chunk=0, 
                     naive=True,
                     saxpy=True,
                     tiled=True,
@@ -626,7 +632,7 @@ Another property that could be interesting is the version with `OpenMP` is close
 ```{r echo=FALSE}
 part2 = rbind(py$omp_df, py$non_omp_df)
 ```
-```{r echo=FALSE, fig.cap="Computation time in function of matrix size and technique"}
+```{r echo=FALSE, fig.cap="Computational time in function of matrix size"}
 part2[part2$Block == 256,] %>%
     ggplot(aes(x = M, y = Time, shape = OMP, color = Technique, group = interaction(OMP, Technique))) +
     geom_line(alpha = 0.75) +
@@ -646,9 +652,13 @@ part2[part2$Block == 256,] %>%
     scale_color_manual(values = rainbow(4))
 ```
 
-# Threading
+## Threading
+```{python include=FALSE}
+M_thread = K_thread = N_thread = 2048
+block_thread = 256
+```
 
-Right now, we want to see the true power of parallelism, we will fix matrix size to `M` = `K` = `N` = 2048, `block` to 256, and vary the number of threads.
+Right now, we want to see the true power of parallelism, we will fix matrix size to `M` = `K` = `N` = `r py$M_thread`, `BLOCK` size to `r py$block_thread`, and vary the number of threads.
 
 ```{python include=FALSE}
 thread_df = None
@@ -661,10 +671,10 @@ else:
         num_threads = 2 ** i
         thread_dfs.append(
             compile_and_run(
-                2048,
-                2048,
-                2048,
-                256,
+                M_thread,
+                K_thread,
+                N_thread,
+                block_thread,
                 True,
                 num_threads,
                 "static",
@@ -677,10 +687,10 @@ else:
         )
         thread_dfs.append(
             compile_and_run(
-                2048,
-                2048,
-                2048,
-                256,
+                M_thread,
+                K_thread,
+                N_thread,
+                block_thread,
                 True,
                 num_threads,
                 "dynamic",
@@ -693,10 +703,10 @@ else:
         )
         thread_dfs.append(
             compile_and_run(
-                2048,
-                2048,
-                2048,
-                256,
+                M_thread,
+                K_thread,
+                N_thread,
+                block_thread,
                 True,
                 num_threads,
                 "guided",
@@ -709,10 +719,10 @@ else:
         )
         thread_dfs.append(
             compile_and_run(
-                2048,
-                2048,
-                2048,
-                256,
+                M_thread,
+                K_thread,
+                N_thread,
+                block_thread,
                 True,
                 num_threads,
                 "auto",
@@ -743,7 +753,7 @@ In addition, the 4 schedule lines of each technique are overlapping each others 
 -  `dynamic` and `guided` are designed for different situation, where each iteration takes different amount of time to finish their work. There is overhead compared to `static`, however, it does not have big effect on overall performance as our matrices are not too big.
 - `auto` lets the compiler choose how to schedule and divide work among threads, so it is compiler-specific. For example, `gcc` maps `auto` to `static` ^[https://github.com/gcc-mirror/gcc/blob/61e53698a08dc1d9a54d785218af687a6751c1b3/libgomp/loop.c#L195-L198], at a consequence, we see a similar pattern with `static`.
 
-```{r echo=FALSE}
+```{r echo=FALSE, fig.cap="Computational time in function of number of threads"}
 part3 = py$thread_df
 part3 %>%
     ggplot(aes(x = Threads, y = Time, shape = Schedule, color = Technique, group = interaction(Schedule, Technique))) +
@@ -762,9 +772,13 @@ part3 %>%
 
 Finally, more threads **doesn't** always mean better performance. After we increased thread to 2, time taking for one multiplication fluctuates but does not have any real decline. The reason is there are only 2 physical cores on this computer, when the number of threads goes up too high, the overhead in creating and synchronize threads will overshadowed any benefits we gain.
 
-# Blocking
+## Blocking
+```{python include=FALSE}
+M_block = K_block = N_block = 2048
+num_threads_block = 4
+```
 
-In the last section, we will concentrate ourselves on the impact of `BLOCK` size to overall performance. We will fix `M` = `K` = `N` = 2048, number of threads to 4, `static` schedule and vary the `BLOCK` size.
+In the last section, we will concentrate ourselves on the impact of `BLOCK` size to overall performance. We will fix `M` = `K` = `N` = `r py$M_block`, number of threads to `r py$num_threads_block`, `static` schedule and vary the `BLOCK` size.
 
 ```{python include=FALSE}
 block_df = None
@@ -777,12 +791,12 @@ else:
         block = 2 ** i
         block_dfs.append(
             compile_and_run(
-                4096,
-                4096,
-                4096,
+                M_block,
+                K_block,
+                N_block,
                 block,
                 True,
-                4,
+                num_threads_block,
                 "static",
                 0,
                 saxpy=True,
@@ -792,12 +806,12 @@ else:
         )
         block_dfs.append(
             compile_and_run(
-                4096,
-                4096,
-                4096,
+                M_block,
+                K_block,
+                N_block,
                 block,
                 False,
-                4,
+                num_threads_block,
                 "static",
                 0,
                 saxpy=True,
@@ -814,7 +828,7 @@ block_df.Technique = pd.Categorical(
 
 ```
 
-```{r echo=FALSE}
+```{r echo=FALSE, fig.cap = "Computational time in function of `BLOCK` size"}
 part4 = py$block_df
 part4 %>%
     ggplot(aes(x = Block, y = Time, shape = OMP, color = Technique, group = interaction(OMP, Technique))) +
@@ -833,7 +847,7 @@ part4 %>%
 
 We see clearly that as `BLOCK` size grows, the performance becomes better but get worse after `BLOCK` size grows to approximately $2^10$. As explained in the [section 1](#cache-blocking), `BLOCK` should not be too small and neither too large.
 
-# Conslusion
+# Conclusion
 
 Throughout the report, it is shown clearly that there are many techniques to speed up our code. Depending on each problem and resources, we could also have a combination of all these techniques as well as having a detail benchmark to achive the best possible performance.
 
@@ -864,7 +878,7 @@ double norm(int nrow, int ncol, int ld, double *A);
 void print_array(int nrow, int ncol, int ld, double *A);
 ```
 However, we found below this piece of code that suggests there maybe a mistake between `M` and `N`
-```
+```{c eval=FALSE}
 printf("Frobenius Norm   = %f\n", norm(N, M, ldc, c));
 // ...
 print_array(M, N, ldc, c);
@@ -877,3 +891,47 @@ print(
   ))
 )
 ```
+We succesully fixed the "naive" method but there are still something "weird" with `cblas_dgemm` output. We dig deeper into the [document](https://www.intel.com/content/www/us/en/develop/documentation/onemkl-developer-reference-c/top/blas-and-sparse-blas-routines/blas-routines/blas-level-3-routines/cblas-gemm.html) and found that there is something wrong with 
+```{c eval=FALSE}
+int lda = N + 1;
+int ldb = K + 1;
+int ldc = N + 1;
+
+double *a = (double *)malloc(lda * K * sizeof(double));
+double *b = (double *)malloc(ldb * M * sizeof(double));
+double *c = (double *)malloc(ldc * M * sizeof(double));
+
+// ...
+
+cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, M, N, K, alpha, a, lda,
+            b, ldb, beta, c, ldc);
+```
+
+Here, `a` is supposed to be a `double` pointer whose size is `M * K` but the code above allocated a pointer with the size of `(N + 1) * K`. According to the document, when using with `CblasColMajor` and `CblasNoTrans`, `lda` should be the number of elements in one column, so `lda` is equal to `M`. After editing the code to
+```{c eval=FALSE}
+int lda = M;
+int ldb = K;
+int ldc = M;
+
+double *a = (double *)malloc(lda * K * sizeof(double));
+double *b = (double *)malloc(ldb * N * sizeof(double));
+double *c = (double *)malloc(ldc * N * sizeof(double));
+```
+
+We got the correct result as shown in the [section 1](#techniques).
+
+## Minor issues {-}
+
+When trying to change the schedule, the schedule value is switched. According to the `OpenMP` [document](https://www.openmp.org/spec-html/5.0/openmpsu121.html#x158-7050003.2.12), `guided` should be 3 and `auto` is 4 instead of vice versa.
+
+Finally, we add a
+```
+free(a);
+free(b);
+free(c);
+```
+at the end for preventing memory leaks.
+
+## Source code {-}
+
+Full source code could be found on [github](https://github.com/vnghia/4MIC-HPC).
